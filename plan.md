@@ -50,7 +50,7 @@ B. **Real** — Google's own top combinations (Assets → Combinations report;
 
 **Decided 2026-09-24: B first (real combinations).**
 
-### Phase 0 — Real-combination feed (in progress)
+### Phase 0 — Real-combination feed (done, pending schedule)
 - [x] `google-ads-script/export_combinations.js` — Google Ads Script, writes
   `RSA Combinations` + `PMax Combinations` tabs into the ad-copy sheet
   (RSA: every served combo w/ impressions, ranked; PMax: Google's top-20 per asset group).
@@ -58,6 +58,8 @@ B. **Real** — Google's own top combinations (Assets → Combinations report;
   Runner needs **edit** access to the sheet (owned by supermetrics@position2.co.in).
 - [x] First run 2026-09-24: 959 RSA combos (44 ads, 17 ad groups) + 54 PMax combos
   (3 asset groups × TEXT/IMAGE/VIDEO categories × top 6), with real image/logo URLs.
-- [ ] v3 script adds sitelink/callout/snippet text (were blank in v2) — user to re-paste + schedule daily.
+- [x] Script now resolves sitelink (+ description lines), callout and snippet text — verified 2026-09-24, 0 unresolved assets.
+  Guarded: per-type lookups, never wipes tabs on empty result, auto-discovers MCC client accounts.
+- [ ] User schedules the script Daily (after ~9am IST Supermetrics refresh).
   Note: only 13/959 RSA combos show a 3rd headline; Google mostly serves 2H + sitelinks.
 - Demand Gen: no combination API exists → shown as simulated previews, labelled as such.
