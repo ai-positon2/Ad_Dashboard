@@ -248,12 +248,44 @@ h3{font:600 11.5px/1.2 var(--ui);letter-spacing:.08em;text-transform:uppercase;c
 .gm .dd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (prefers-reduced-motion:no-preference){.stage .g{animation:fade .18s ease-out}}
 @keyframes fade{from{opacity:.5;transform:translateY(3px)}to{opacity:1;transform:none}}
+/* account summary */
+.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:12px 20px}
+.sumbtn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:9px 16px;font-weight:600;font-size:13.5px}
+.sumbtn:hover{filter:brightness(1.08)}
+.sumbtn svg{width:16px;height:16px}
+dialog.sum{border:0;padding:0;border-radius:12px;width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 48px);background:var(--surface);color:var(--ink);box-shadow:0 18px 60px rgb(0 0 0 / .35)}
+dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
+.sum .shd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:18px 20px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
+.sum .shd h2{font:600 19px/1.2 var(--display);margin:0}
+.sum .shd .sub{font-size:12px;color:var(--muted);margin-top:3px}
+.sum .x{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:32px;height:32px;font-size:18px;line-height:1}
+.sum .sbody{padding:18px 20px 22px;display:flex;flex-direction:column;gap:18px}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);padding:12px 14px}
+.kpi .l{font-size:12px;color:var(--muted)}
+.kpi .v{font:600 22px/1.2 var(--ui);letter-spacing:-.01em;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:11.5px;color:var(--faint);margin-top:1px}
+.scharts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
+.ai{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:var(--ground)}
+.ai h3{margin-bottom:8px}
+.ai p{margin:0 0 8px;line-height:1.55}
+.ai ul{margin:0 0 8px;padding-left:18px;display:flex;flex-direction:column;gap:4px;line-height:1.5}
+.ai .foot{font-size:11.5px;color:var(--faint);margin-top:8px}
+.ai .err{color:var(--muted)}
+.pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:8px;vertical-align:middle}
+@media (prefers-reduced-motion:no-preference){.pulse{animation:pulse 1s ease-in-out infinite alternate}}
+@keyframes pulse{from{opacity:.25}to{opacity:1}}
+.warnbox{font-size:13px;padding:9px 12px;border-radius:8px;background:var(--s-average-bg);color:var(--s-average)}
 </style>
 
 <div class="wrap">
   <header class="top">
-    <h1><span id="client">Tealium</span> ad previews</h1>
-    <div class="fresh" id="fresh"></div>
+    <div>
+      <h1><span id="client">Tealium</span> ad previews</h1>
+      <div class="fresh" id="fresh"></div>
+    </div>
+    <button type="button" class="sumbtn" id="sumBtn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 13.5h12M4 11V7M8 11V3M12 11V5.5"/></svg>Account summary</button>
   </header>
   <div class="ov" id="overview" aria-label="Overview"></div>
   <nav class="bar" aria-label="Filters">
@@ -270,6 +302,7 @@ h3{font:600 11.5px/1.2 var(--ui);letter-spacing:.08em;text-transform:uppercase;c
 </div>
 
 <div id="tip" role="tooltip" hidden></div>
+<dialog class="sum" id="sumDlg" aria-label="Account summary"></dialog>
 <script>
 const DATA=/*__DATA__*/null;
 const $=s=>document.querySelector(s);
@@ -662,4 +695,70 @@ const hm=location.hash.match(/^#ad-(.+)$/);
 if(hm&&ads.some(a=>a.id===hm[1]))state.sel=hm[1];
 else{const top=ads.filter(a=>a.served&&a.kind==="RSA").sort((a,b)=>b.impressions-a.impressions)[0];if(top)state.sel=top.id}
 renderHeader();render();
+
+/* ---------- account summary (button, top right) ---------- */
+const CHANNEL={SEARCH:"Search",PERFORMANCE_MAX:"Performance Max",DEMAND_GEN:"Demand Gen",DISPLAY:"Display",VIDEO:"Video",SHOPPING:"Shopping",MULTI_CHANNEL:"App"};
+const sumState={account:null,cache:{}};
+function money(v,cur){try{return new Intl.NumberFormat("en-US",{style:"currency",currency:cur||"USD",maximumFractionDigits:v>=100?0:2}).format(v)}catch(e){return (cur||"")+" "+fmt(Math.round(v))}}
+function perfFor(acc){return (DATA.performance||[]).filter(p=>acc==="All"||p.account===acc)}
+function renderSummary(){
+  const acc=sumState.account,dlg=$("#sumDlg");
+  const accts=[...new Set(ads.map(a=>a.account))].sort();
+  const pool=ads.filter(a=>acc==="All"||a.account===acc),perf=perfFor(acc);
+  const served=pool.filter(a=>a.kind==="RSA"&&a.served);
+  const cur=(perf[0]||{}).currency;
+  const sum=(per,k)=>perf.reduce((s,p)=>s+p[per][k],0);
+  let kpis,charts="",warn="";
+  if(perf.length){
+    const cost=sum("d30","cost"),conv=sum("d30","conv"),clicks=sum("d30","clicks"),impr=sum("d30","impr");
+    const live=perf.reduce((s,p)=>s+p.liveAds,0);
+    kpis=[["Live ads",fmt(live),`across ${perf.length} enabled campaigns`],["Spend · last 30 days",money(cost,cur),`${money(sum("mtd","cost"),cur)} this month`],
+      ["Clicks · last 30 days",fmt(clicks),impr?`${(clicks/impr*100).toFixed(2)}% click-through rate`:""],["Conversions · last 30 days",fmt(Math.round(conv*10)/10),`${fmt(Math.round(sum("mtd","conv")*10)/10)} this month`],
+      ["Cost per conversion",conv?money(cost/conv,cur):"—","last 30 days"],["Search impressions",fmt(served.reduce((s,a)=>s+a.impressions,0)),`${served.length} Search ads served`]];
+    const byCh=new Map();perf.forEach(p=>byCh.set(p.channel,(byCh.get(p.channel)||0)+p.liveAds));
+    const chRows=[...byCh].filter(([,v])=>v).sort((a,b)=>b[1]-a[1]).map(([c,v])=>({label:CHANNEL[c]||c,v,tip:`${CHANNEL[c]||c}: ${v} live ads${c==="PERFORMANCE_MAX"?" (asset groups)":""}`}));
+    const top=[...perf].sort((a,b)=>b.d30.cost-a.d30.cost).slice(0,6).filter(p=>p.d30.cost>0);
+    const spRows=top.map(p=>({label:p.campaign,v:Math.round(p.d30.cost),tip:`${p.campaign} (${p.account}): ${money(p.d30.cost,cur)} spend, ${fmt(p.d30.clicks)} clicks, ${fmt(Math.round(p.d30.conv*10)/10)} conversions`}));
+    charts=`<div class="scharts">
+      <div><p class="ctitle">Live ads by campaign type</p><p class="csub">Enabled ads in enabled campaigns. PMax counts asset groups.</p>${chRows.length?hbars(chRows,Math.max(...chRows.map(r=>r.v)),false):`<p class="csub">No live ads.</p>`}</div>
+      <div><p class="ctitle">Spend by campaign</p><p class="csub">Last 30 days, in ${esc(cur||"account currency")}.</p>${spRows.length?hbars(spRows,Math.max(...spRows.map(r=>r.v)),false):`<p class="csub">No spend in the last 30 days.</p>`}</div></div>`;
+  }else{
+    warn=`<div class="warnbox">Spend, clicks and conversions appear here once the <b>Campaign Performance</b> Google Ads Script has run.</div>`;
+    kpis=[["Search ads served",fmt(served.length),"last 30 days"],["Search impressions",fmt(served.reduce((s,a)=>s+a.impressions,0)),"from served combinations"],
+      ["PMax asset groups",fmt(pool.filter(a=>a.kind==="PMAX").length),""],["Demand Gen ads",fmt(pool.filter(a=>a.kind==="DG").length),"in the ad-copy sheet"],
+      ["Search ads not served",fmt(pool.filter(a=>a.kind==="RSA"&&!a.served).length),"no impressions in 30 days"],["Real combinations",fmt(pool.reduce((s,a)=>s+a.combos.length,0)),"reported by Google"]];
+  }
+  const asOf=DATA.perfExportedAt||DATA.exportedAt;
+  dlg.innerHTML=`<div class="shd"><div><h2>${esc(DATA.client)} account summary</h2><div class="sub">Data as of ${esc(asOf)} · ${esc(acc==="All"?"all accounts":acc)}</div></div>
+      <div class="bar">${`<div class="seg" id="sumAcct" role="group" aria-label="Account">${[["All","All accounts"],...accts.map(a=>[a,a])].map(([v,l])=>`<button type="button" data-v="${esc(v)}" aria-pressed="${acc===v}">${esc(l)}</button>`).join("")}</div>`}
+      <button type="button" class="x" id="sumClose" aria-label="Close summary">×</button></div></div>
+    <div class="sbody">${warn}
+      <div class="kpis">${kpis.map(([l,v,d])=>`<div class="kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div>${d?`<div class="d">${esc(d)}</div>`:""}</div>`).join("")}</div>
+      ${charts}
+      <div class="ai" id="aiBox"><h3>What's happening</h3><div id="aiText"><span class="pulse"></span>Writing the summary…</div></div>
+    </div>`;
+  loadAiSummary(acc);
+}
+function aiHtml(text){
+  const lines=text.split(/\n+/).map(s=>s.trim()).filter(Boolean);let html="",list=[];
+  const flush=()=>{if(list.length){html+=`<ul>${list.map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`;list=[]}};
+  lines.forEach(l=>{if(/^[-•*]\s+/.test(l))list.push(l.replace(/^[-•*]\s+/,""));else{flush();html+=`<p>${esc(l)}</p>`}});flush();return html;
+}
+async function loadAiSummary(acc){
+  const box=()=>document.getElementById("aiText");
+  const done=(html)=>{if(sumState.account===acc&&box())box().innerHTML=html};
+  if(sumState.cache[acc])return done(sumState.cache[acc]);
+  try{
+    const r=await fetch(`api/summary?account=${encodeURIComponent(acc)}`,{headers:{Accept:"application/json"}});
+    const j=await r.json().catch(()=>({error:"The summary service isn't available on this copy of the dashboard."}));
+    if(!r.ok||!j.text)return done(`<p class="err">${esc(j.error||"The summary couldn't be written just now.")}</p>`);
+    const html=aiHtml(j.text)+`<div class="foot">Written by ${esc(j.model)} from the figures above. Refreshes with each data update.</div>`;
+    sumState.cache[acc]=html;done(html);
+  }catch(e){done(`<p class="err">The AI-written summary runs on the hosted dashboard. The figures above are live from the data.</p>`)}
+}
+$("#sumBtn").addEventListener("click",()=>{sumState.account=state.account;renderSummary();const d=$("#sumDlg");if(!d.open)d.showModal()});
+$("#sumDlg").addEventListener("click",e=>{
+  if(e.target.id==="sumDlg"||e.target.closest("#sumClose")){$("#sumDlg").close();return}
+  const b=e.target.closest("#sumAcct button");if(b){sumState.account=b.dataset.v;renderSummary()}
+});
 </script>

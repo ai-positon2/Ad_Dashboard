@@ -215,6 +215,26 @@ def build_demand_gen(sheet):
     return out
 
 
+# ----------------------------------------------------- campaign performance
+def build_performance(tab):
+    """Spend/clicks/conversions per enabled campaign, from the Google Ads Script's tab."""
+    if tab is None or tab.dropna(how="all").empty:
+        return []
+    num = lambda v: float(clean(v) or 0)
+    out = []
+    for _, r in tab.iterrows():
+        out.append({
+            "account": short_account(clean(r["Account"])), "currency": clean(r["Currency"]),
+            "campaign": clean(r["Campaign"]), "channel": clean(r["Channel"]), "status": clean(r["Status"]),
+            "liveAds": int(num(r["Live ads"])),
+            "d30": {k: num(r[f"{c} 30d"]) for k, c in (("cost", "Cost"), ("clicks", "Clicks"), ("impr", "Impressions"),
+                                                        ("conv", "Conversions"), ("value", "Conv. value"))},
+            "mtd": {k: num(r[f"{c} MTD"]) for k, c in (("cost", "Cost"), ("clicks", "Clicks"), ("impr", "Impressions"),
+                                                        ("conv", "Conversions"), ("value", "Conv. value"))},
+        })
+    return out
+
+
 def main():
     url = f"https://docs.google.com/spreadsheets/d/{CLIENT['sheet_id']}/export?format=xlsx"
     print("Downloading sheet...")
@@ -237,6 +257,9 @@ def main():
         "exportedAt": clean(rc["Exported at"].iloc[0]),
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "ads": ads,
+        "performance": build_performance(x.get("Campaign Performance")),
+        "perfExportedAt": clean(x["Campaign Performance"]["Exported at"].iloc[0])
+        if "Campaign Performance" in x and not x["Campaign Performance"].empty else "",
     }
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8")
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
