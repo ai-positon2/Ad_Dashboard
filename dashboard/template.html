@@ -1,0 +1,522 @@
+<title>Tealium Ad Previews</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F2F3F6;--surface:#FFFFFF;--sunk:#E9EBF0;--ink:#161B26;--muted:#5A6273;--faint:#8A91A0;--line:#DCE0E7;
+  --accent:#0E6B5C;--accent-soft:#DDEFEB;
+  --s-excellent:#137333;--s-good:#2F8F46;--s-average:#B45F06;--s-poor:#C5221F;--s-none:#8A91A0;
+  --s-excellent-bg:#E3F2E7;--s-good-bg:#E8F4EA;--s-average-bg:#FCEFDF;--s-poor-bg:#FBE7E6;--s-none-bg:#ECEEF2;
+  --sim:#7A4FB5;--sim-bg:#F1EAFA;
+  --k-rsa:#1B4FA8;--k-rsa-bg:#E3ECFB;--k-pmax:#9A4A06;--k-pmax-bg:#FDEBD8;
+  --serp-bg:#FFFFFF;--serp-title:#1A0DAB;--serp-text:#474747;--serp-ink:#202124;--serp-url:#4D5156;--serp-line:#DADCE0;--serp-chip:#F1F3F4;
+  --frame:#E4E7EC;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --ui:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --google:Arial,"Helvetica Neue",Helvetica,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#0E1117;--surface:#161A22;--sunk:#1D222C;--ink:#E7EAF0;--muted:#A0A8B7;--faint:#6F7788;--line:#29303C;
+  --accent:#45C2AC;--accent-soft:#133A34;
+  --s-excellent:#6DD58C;--s-good:#81C995;--s-average:#F2B061;--s-poor:#F28B82;--s-none:#8D95A4;
+  --s-excellent-bg:#15321F;--s-good-bg:#18301F;--s-average-bg:#3A2A14;--s-poor-bg:#3C1C1A;--s-none-bg:#232833;
+  --sim:#C2A2F0;--sim-bg:#2A2138;
+  --k-rsa:#9CC0FF;--k-rsa-bg:#1B2B45;--k-pmax:#F5B97A;--k-pmax-bg:#3A2614;
+  --serp-bg:#1F1F1F;--serp-title:#99C3FF;--serp-text:#BFBFBF;--serp-ink:#E8EAED;--serp-url:#BDC1C6;--serp-line:#3C4043;--serp-chip:#303134;
+  --frame:#232833;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1117;--surface:#161A22;--sunk:#1D222C;--ink:#E7EAF0;--muted:#A0A8B7;--faint:#6F7788;--line:#29303C;
+  --accent:#45C2AC;--accent-soft:#133A34;
+  --s-excellent:#6DD58C;--s-good:#81C995;--s-average:#F2B061;--s-poor:#F28B82;--s-none:#8D95A4;
+  --s-excellent-bg:#15321F;--s-good-bg:#18301F;--s-average-bg:#3A2A14;--s-poor-bg:#3C1C1A;--s-none-bg:#232833;
+  --sim:#C2A2F0;--sim-bg:#2A2138;
+  --k-rsa:#9CC0FF;--k-rsa-bg:#1B2B45;--k-pmax:#F5B97A;--k-pmax-bg:#3A2614;
+  --serp-bg:#1F1F1F;--serp-title:#99C3FF;--serp-text:#BFBFBF;--serp-ink:#E8EAED;--serp-url:#BDC1C6;--serp-line:#3C4043;--serp-chip:#303134;
+  --frame:#232833;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:14px/1.5 var(--ui);padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* header */
+.top h1{font:700 26px/1.1 var(--display);letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
+.top h1 span{color:var(--accent)}
+.fresh{color:var(--muted);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 16px}
+.fresh b{color:var(--ink);font-weight:600}
+.stats{display:flex;flex-wrap:wrap;gap:10px 32px;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.stat{display:flex;flex-direction:column}
+.stat .n{font:600 20px/1.2 var(--mono);font-variant-numeric:tabular-nums}
+.stat .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* toolbar */
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:inline-flex;background:var(--sunk);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:5px 11px;border-radius:6px;font-size:13px;color:var(--muted);font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .12)}
+.field{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;min-width:0}
+select.field{max-width:280px}
+input.field{flex:1 1 200px;max-width:320px}
+.check{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+
+/* main grid */
+.main{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:960px){.main{grid-template-columns:minmax(0,1fr)}}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:10px;max-height:calc(100vh - 40px);overflow:auto;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px)}
+@media (max-width:960px){.list{position:static;max-height:46vh}}
+.grp{padding:9px 14px 7px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600;position:sticky;top:0;z-index:1;background:var(--surface);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.grp span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:10px 14px}
+.item:hover{background:var(--sunk)}
+.item[aria-current="true"]{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.item .t{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .s{grid-column:1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .r{grid-row:1/3;grid-column:2;display:flex;flex-direction:column;align-items:flex-end;gap:3px;font-size:12px}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+
+/* chips & pills */
+.kind{font:600 10.5px/1 var(--ui);letter-spacing:.05em;text-transform:uppercase;padding:4px 6px;border-radius:4px}
+.kind.RSA{background:var(--k-rsa-bg);color:var(--k-rsa)}.kind.PMAX{background:var(--k-pmax-bg);color:var(--k-pmax)}.kind.DG{background:var(--sim-bg);color:var(--sim)}
+.str{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;white-space:nowrap}
+.str::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.str.sm{font-size:11px;padding:0 6px}
+.str.excellent{color:var(--s-excellent);background:var(--s-excellent-bg)}.str.good{color:var(--s-good);background:var(--s-good-bg)}
+.str.average{color:var(--s-average);background:var(--s-average-bg)}.str.poor{color:var(--s-poor);background:var(--s-poor-bg)}
+.str.none{color:var(--s-none);background:var(--s-none-bg)}
+
+/* detail */
+.detail{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.crumb{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px}
+.crumb span+span::before{content:"›";margin-right:4px;color:var(--faint)}
+.detail h2{font:600 21px/1.25 var(--display);margin:6px 0 10px;text-wrap:balance}
+.meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;color:var(--muted)}
+.meta b{color:var(--ink)}
+.meta a{color:var(--accent);font-weight:600;text-decoration:none}
+.note{margin-top:12px;font-size:13px;padding:9px 12px;border-radius:8px;background:var(--sim-bg);color:var(--sim)}
+.note.real{background:var(--accent-soft);color:var(--accent)}
+h3{font:600 11.5px/1.2 var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.phead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.phead h3{margin:0}
+.pgrid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+@media (max-width:1180px){.pgrid{grid-template-columns:minmax(0,1fr)}}
+.stage{background:var(--frame);border-radius:10px;padding:22px;display:flex;justify-content:center;align-items:flex-start;min-height:220px;overflow:hidden}
+@media (max-width:520px){.stage{padding:12px}}
+.stepper{display:flex;align-items:center;gap:10px;justify-content:center;margin-top:10px;font-size:12.5px;color:var(--muted);text-align:center}
+.stepper button{border:1px solid var(--line);background:var(--surface);border-radius:6px;width:30px;height:28px;line-height:1;flex:none}
+.combos{display:flex;flex-direction:column;gap:6px;max-height:520px;overflow:auto;padding:2px}
+.combo{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:5px 8px;align-items:center;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px}
+.combo:hover{border-color:var(--faint)}
+.combo[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.combo .rk{font:500 12px var(--mono);color:var(--faint)}
+.combo .tx{font-size:12.5px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.combo .tx .d{color:var(--muted)}
+.combo .im{font-size:12px}
+.combo .bar{grid-column:2/4;height:4px;background:var(--sunk);border-radius:2px;overflow:hidden;display:block}
+.combo .bar i{display:block;height:100%;background:var(--accent);border-radius:2px}
+
+/* asset tables */
+.acols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:22px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);text-align:left;padding:0 8px 6px;border-bottom:1px solid var(--line)}
+.tbl th.num,.tbl td.num{text-align:right;white-space:nowrap}
+.tbl td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr.off td:first-child{color:var(--faint)}
+.share{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.share .b{width:56px;height:5px;background:var(--sunk);border-radius:3px;overflow:hidden}
+.share .b i{display:block;height:100%;background:var(--accent)}
+.cc{color:var(--faint)}.cc.hi{color:var(--s-average)}
+.sect{margin-top:22px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12.5px;padding:3px 10px;border-radius:99px;background:var(--sunk)}
+.gallery{display:flex;flex-wrap:wrap;gap:12px}
+.gallery figure{margin:0;display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--faint)}
+.gallery img{height:96px;width:auto;max-width:170px;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--sunk);display:block}
+
+/* ---------- Google previews ---------- */
+.g{font-family:var(--google);color:var(--serp-ink);background:var(--serp-bg);border-radius:10px;box-shadow:0 1px 3px rgb(0 0 0 / .16);width:100%;max-width:640px;overflow:hidden}
+.g.mobile{max-width:380px}
+.serp{padding:18px 20px}
+.g.mobile .serp{padding:14px 16px}
+.serp .sp{font-weight:700;font-size:14px;margin-bottom:10px}
+.serp .row{display:flex;gap:14px}
+.serp .body{flex:1;min-width:0}
+.site{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.fav{width:28px;height:28px;border-radius:50%;border:1px solid var(--serp-line);display:grid;place-items:center;overflow:hidden;background:#fff;color:#202124;font-size:13px;font-weight:700;flex:none}
+.fav img{width:100%;height:100%;object-fit:contain}
+.site .nm{font-size:14px;line-height:20px}
+.site .u{font-size:12px;line-height:18px;color:var(--serp-url);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.serp .hl{display:block;color:var(--serp-title);font-size:20px;line-height:26px;margin:2px 0 3px}
+.g.mobile .serp .hl{font-size:18px;line-height:24px}
+.serp .ds,.serp .co{font-size:14px;line-height:22px;color:var(--serp-text)}
+.serp .thumb{width:92px;height:92px;border-radius:8px;object-fit:cover;flex:none}
+.serp .thumb.wide{width:100%;height:auto;aspect-ratio:1.91/1;margin-top:10px}
+.sl2{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-top:12px}
+.sl2 .t{color:var(--serp-title);font-size:15px}
+.sl2 .d{font-size:13px;color:var(--serp-text);line-height:19px}
+.sl1{display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:6px;color:var(--serp-title);font-size:14px}
+.slm{display:flex;gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:2px}
+.slm span{flex:none;border:1px solid var(--serp-line);border-radius:18px;padding:7px 14px;color:var(--serp-title);font-size:14px;white-space:nowrap}
+.img{display:block;width:100%;max-width:100%;aspect-ratio:1.91/1;object-fit:cover;background:var(--serp-chip)}
+.img.sq{aspect-ratio:1/1}
+.ph{display:grid;place-items:center;background:linear-gradient(135deg,var(--serp-chip),var(--serp-line));color:var(--serp-url);font-size:12px;text-align:center;padding:12px}
+.disp{max-width:340px}
+.disc{max-width:400px}
+.card-in{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px}
+.disp .hd{font-size:18px;line-height:23px;font-weight:700}
+.disc .hd{font-size:17px;line-height:23px}
+.dd{font-size:13px;line-height:18px;color:var(--serp-text)}
+.byline{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--serp-url)}
+.byline b{color:var(--serp-ink)}
+.byline .fav{width:24px;height:24px;font-size:11px}
+.cta{align-self:flex-start;background:#1A73E8;color:#fff;border-radius:18px;padding:7px 16px;font-size:13px;font-weight:700;display:inline-block}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:4px}
+.yt{max-width:420px;padding:10px}
+.yt .vbox{position:relative;display:block;border-radius:10px;overflow:hidden}
+.yt .play{position:absolute;inset:0;display:grid;place-items:center}
+.yt .play span{width:62px;height:44px;border-radius:12px;background:rgb(0 0 0 / .72);display:grid;place-items:center}
+.yt .play span::after{content:"";border-left:16px solid #fff;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:4px}
+.yt .row{display:flex;gap:12px;padding:12px 2px 4px}
+.yt .hd{font-size:15px;line-height:21px;font-weight:700}
+.yt .sub{font-size:12.5px;color:var(--serp-url);margin-top:2px}
+.yt .cta{margin-top:10px}
+.gm{max-width:560px;display:flex;gap:12px;align-items:flex-start;padding:14px 16px}
+.gm .fav{width:36px;height:36px}
+.gm .who{font-size:13px;display:flex;gap:6px;align-items:center}
+.adb{font-size:11px;font-weight:700;border:1px solid currentColor;border-radius:3px;padding:0 3px;line-height:14px}
+.gm .hd{font-weight:700;font-size:14px;margin-top:2px}
+.gm .dd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (prefers-reduced-motion:no-preference){.stage .g{animation:fade .18s ease-out}}
+@keyframes fade{from{opacity:.5;transform:translateY(3px)}to{opacity:1;transform:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1><span id="client">Tealium</span> ad previews</h1>
+    <div class="fresh" id="fresh"></div>
+  </header>
+  <section class="stats" id="stats" aria-label="Summary"></section>
+  <nav class="bar" aria-label="Filters">
+    <div class="seg" id="f-account" role="group" aria-label="Account"></div>
+    <div class="seg" id="f-kind" role="group" aria-label="Ad type"></div>
+    <select class="field" id="f-campaign" aria-label="Campaign"></select>
+    <input class="field" id="f-q" type="search" placeholder="Search headlines, descriptions, ad groups" aria-label="Search">
+    <label class="check"><input type="checkbox" id="f-unserved" checked> Include not-served ads</label>
+  </nav>
+  <div class="main">
+    <aside class="list" id="list" aria-label="Ads"></aside>
+    <section class="detail" id="detail" aria-live="polite"></section>
+  </div>
+</div>
+
+<script>
+const DATA=/*__DATA__*/null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>n==null?"—":Number(n).toLocaleString("en-US");
+const KIND={RSA:"Search",PMAX:"PMax",DG:"Demand Gen"};
+const LIMIT={headline:30,description:90,long:90,sitelink:25,callout:25};
+const store={get(k,d){try{const v=localStorage.getItem("adp."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("adp."+k,JSON.stringify(v))}catch(e){}}};
+const state={account:"All",kind:"All",campaign:"All",q:"",unserved:true,sel:null,combo:0,
+  device:store.get("device","desktop"),pcat:"TEXT",pfmt:"display",dgfmt:"discover"};
+
+/* ---------- data helpers ---------- */
+const ads=DATA.ads;
+ads.forEach(a=>{
+  a.title=a.adGroup||(a.headlines||[])[0]||a.campaign;
+  a.text=[a.adGroup,a.campaign,...(a.headlines||[]),...(a.descriptions||[]),...(a.longHeadlines||[])].join(" ").toLowerCase();
+});
+const strengthKey=s=>(s||"none").toLowerCase();
+const isH=f=>/^HEADLINE(_\d)?$/.test(f), isD=f=>/^DESCRIPTION(_\d)?$/.test(f);
+const heads=P=>P.filter(p=>isH(p.f)&&p.x).map(p=>p.x);
+const descs=P=>P.filter(p=>isD(p.f)&&p.x).map(p=>p.x);
+const textOf=(P,re)=>{const p=P.find(p=>re.test(p.f)&&p.x);return p?p.x:""};
+const prettyCta=c=>c?c.toLowerCase().replace(/_/g," ").replace(/^./,m=>m.toUpperCase()):"Learn more";
+function hostOf(u){try{return new URL(u).hostname}catch(e){return DATA.domain}}
+function displayUrl(ad){const h=hostOf(ad.finalUrl).replace(/^(?!www\.)/,"www.");return "https://"+h+[ad.path1,ad.path2].filter(Boolean).map(p=>" › "+p).join("")}
+
+/* Simulated combos for ads Google doesn't report on (Demand Gen, RSAs with no impressions). */
+function simCombos(ad){
+  const H=ad.headlines||[],D=ad.descriptions||[],out=[];
+  if(!H.length)return out;
+  for(let i=0;i<Math.min(8,H.length);i++){
+    const parts=[];
+    const hs=ad.kind==="DG"?[H[i]]:[H[i],H[(i+1)%H.length],H[(i+2)%H.length]];
+    hs.forEach((h,j)=>parts.push({f:"HEADLINE_"+(j+1),t:"TEXT",x:h}));
+    if(D.length){
+      parts.push({f:"DESCRIPTION_1",t:"TEXT",x:D[i%D.length]});
+      if(ad.kind!=="DG"&&D.length>1)parts.push({f:"DESCRIPTION_2",t:"TEXT",x:D[(i+1)%D.length]});
+    }
+    if(ad.business)parts.push({f:"BUSINESS_NAME",t:"TEXT",x:ad.business});
+    out.push({rank:i+1,sim:true,parts});
+  }
+  return out;
+}
+function allCombos(ad){if(!ad._c)ad._c=ad.combos.length?ad.combos:simCombos(ad);return ad._c}
+function combosOf(ad){const c=allCombos(ad);return ad.kind==="PMAX"?c.filter(x=>x.cat===state.pcat):c}
+
+/* Impression share per asset (RSA) or appearances across Google's top combos (PMax). */
+function usageKey(f){if(/^HEADLINE_AS_SITELINK/.test(f))return "SITELINK";if(isH(f))return "HEADLINE";if(isD(f))return "DESCRIPTION";return f.replace(/_\d$/,"")}
+function assetUsage(ad){
+  const m=new Map(),total=ad.combos.reduce((s,c)=>s+(c.imp||0),0);
+  ad.combos.forEach(c=>{
+    const seen=new Set();
+    c.parts.forEach(p=>{
+      if(!p.x)return;const k=usageKey(p.f)+"|"+p.x;if(seen.has(k))return;seen.add(k);
+      const e=m.get(k)||{imp:0,n:0};e.imp+=c.imp||0;e.n++;m.set(k,e);
+    });
+  });
+  return{get:(type,val)=>m.get(type+"|"+val),total,combos:ad.combos.length};
+}
+
+/* ---------- Google preview renderers ---------- */
+function bizName(ad,P){const b=P.find(p=>(p.f==="BUSINESS_NAME"||p.f==="UNKNOWN")&&p.t==="TEXT"&&p.x);return b?b.x:(ad.business||DATA.client)}
+function fav(ad,P){
+  const logo=P.find(p=>(p.f==="BUSINESS_LOGO"||p.f==="LOGO")&&p.img);
+  return `<span class="fav">${logo?`<img src="${esc(logo.img)}" alt="">`:esc(bizName(ad,P)[0])}</span>`;
+}
+function ctaOf(ad,P){const c=P.find(p=>p.f==="CALL_TO_ACTION"&&p.x);return prettyCta(c?c.x:ad.cta)}
+function pickImg(P,prefer){for(const f of prefer){const p=P.find(p=>p.f===f&&p.img);if(p)return p}return P.find(p=>p.img&&!p.vid&&!/LOGO/.test(p.f))}
+function imgTag(p,cls,label){return p?`<img class="${cls}" src="${esc(p.img)}" alt="">`:`<div class="${cls} ph">${esc(label)}</div>`}
+
+function serp(ad,combo,device){
+  const P=combo.parts,mobile=device==="mobile";
+  const H=heads(P),D=descs(P);
+  const prefix=textOf(P,/^DESCRIPTION_PREFIX$/);
+  const callouts=P.filter(p=>p.f==="CALLOUT"&&p.x).map(p=>p.x);
+  const snip=textOf(P,/^STRUCTURED_SNIPPET$/);
+  const sls=[...P.filter(p=>p.f==="SITELINK"&&p.x),...P.filter(p=>/^HEADLINE_AS_SITELINK/.test(p.f)&&p.x).map(p=>({x:p.x}))];
+  const img=P.find(p=>p.f==="AD_IMAGE"&&p.img);
+  let sl="";
+  if(sls.length){
+    if(mobile)sl=`<div class="slm">${sls.slice(0,6).map(s=>`<span>${esc(s.x)}</span>`).join("")}</div>`;
+    else if(sls.some(s=>s.l&&s.l.length))sl=`<div class="sl2">${sls.slice(0,4).map(s=>`<div><div class="t">${esc(s.x)}</div>${(s.l||[]).map(l=>`<div class="d">${esc(l)}</div>`).join("")}</div>`).join("")}</div>`;
+    else sl=`<div class="sl1">${sls.slice(0,4).map(s=>`<span>${esc(s.x)}</span>`).join("")}</div>`;
+  }
+  return `<div class="g${mobile?" mobile":""}"><div class="serp">
+    <div class="sp">Sponsored</div>
+    <div class="row"><div class="body">
+      <div class="site">${fav(ad,P)}<div style="min-width:0"><div class="nm">${esc(bizName(ad,P))}</div><div class="u">${esc(displayUrl(ad))}</div></div></div>
+      <div class="hl">${esc(H.join(" | ")||"(no headline served)")}</div>
+      <div class="ds">${prefix?esc(prefix)+" · ":""}${esc(D.join(" "))}</div>
+      ${callouts.length?`<div class="co">${callouts.slice(0,4).map(esc).join(" · ")}</div>`:""}
+      ${snip?`<div class="co">${esc(snip)}</div>`:""}
+    </div>${img&&!mobile?`<img class="thumb" src="${esc(img.img)}" alt="">`:""}</div>
+    ${img&&mobile?`<img class="thumb wide" src="${esc(img.img)}" alt="">`:""}
+    ${sl}
+  </div></div>`;
+}
+function displayCard(ad,combo){
+  const P=combo.parts,im=pickImg(P,["MARKETING_IMAGE","AD_IMAGE","SQUARE_MARKETING_IMAGE","PORTRAIT_MARKETING_IMAGE"]);
+  const sq=im&&/SQUARE|PORTRAIT/.test(im.f);
+  return `<div class="g disp">${imgTag(im,"img"+(sq?" sq":""),"No image in this combination")}<div class="card-in">
+    <div class="hd">${esc(textOf(P,/^LONG_HEADLINE/)||heads(P)[0]||"")}</div>
+    <div class="dd">${esc(descs(P)[0]||"")}</div>
+    <div class="foot"><div class="byline">${fav(ad,P)}<span>${esc(bizName(ad,P))}</span></div><span class="cta">${esc(ctaOf(ad,P))}</span></div>
+  </div></div>`;
+}
+function discoverCard(ad,combo){
+  const P=combo.parts,im=pickImg(P,["MARKETING_IMAGE","AD_IMAGE","PORTRAIT_MARKETING_IMAGE","SQUARE_MARKETING_IMAGE"]);
+  return `<div class="g disc">${imgTag(im,"img",combo.sim?"Image assets aren't in the sheet":"No image in this combination")}<div class="card-in">
+    <div class="byline">${fav(ad,P)}<span><b>${esc(bizName(ad,P))}</b> · Sponsored</span></div>
+    <div class="hd">${esc(textOf(P,/^LONG_HEADLINE/)||heads(P)[0]||"")}</div>
+    <div class="dd">${esc(descs(P)[0]||"")}</div>
+    <span class="cta">${esc(ctaOf(ad,P))}</span>
+  </div></div>`;
+}
+function youtubeCard(ad,combo){
+  const P=combo.parts,v=P.find(p=>p.vid)||{};
+  const thumb=v.img?`<img class="img" src="${esc(v.img)}" alt="">`:`<div class="img ph">${combo.sim?"Video assets aren't in the sheet":"No video in this combination"}</div>`;
+  return `<div class="g yt">
+    ${v.vid?`<a class="vbox" href="https://www.youtube.com/watch?v=${esc(v.vid)}" target="_blank" rel="noopener" title="Open this video on YouTube">${thumb}<span class="play"><span></span></span></a>`:`<div class="vbox">${thumb}</div>`}
+    <div class="row">${fav(ad,P)}<div style="min-width:0">
+      <div class="hd">${esc(textOf(P,/^LONG_HEADLINE/)||heads(P)[0]||"")}</div>
+      <div class="sub"><span class="adb">Ad</span> · ${esc(bizName(ad,P))}</div>
+      <div class="dd" style="margin-top:4px">${esc(descs(P)[0]||"")}</div>
+      <span class="cta">${esc(ctaOf(ad,P))}</span>
+    </div></div></div>`;
+}
+function gmailRow(ad,combo){
+  const P=combo.parts;
+  return `<div class="g gm">${fav(ad,P)}<div style="min-width:0">
+    <div class="who"><span class="adb">Ad</span><b>${esc(bizName(ad,P))}</b></div>
+    <div class="hd">${esc(heads(P)[0]||"")}</div>
+    <div class="dd">${esc(descs(P)[0]||"")}</div></div></div>`;
+}
+function renderPreview(ad,combo){
+  if(!combo)return `<div class="empty">No combinations in this format.</div>`;
+  if(ad.kind==="RSA")return serp(ad,combo,state.device);
+  if(ad.kind==="PMAX"){
+    if(state.pcat==="TEXT")return serp(ad,combo,state.device);
+    if(state.pcat==="VIDEO")return youtubeCard(ad,combo);
+    return state.pfmt==="discover"?discoverCard(ad,combo):displayCard(ad,combo);
+  }
+  return({discover:discoverCard,gmail:gmailRow,youtube:youtubeCard})[state.dgfmt](ad,combo);
+}
+
+/* ---------- filters & list ---------- */
+function segBtns(el,opts,key){
+  el.innerHTML=opts.map(([v,l])=>`<button type="button" data-v="${esc(v)}" aria-pressed="${state[key]===v}">${esc(l)}</button>`).join("");
+}
+$("#f-account").onclick=e=>{const b=e.target.closest("button");if(b){state.account=b.dataset.v;state.campaign="All";render()}};
+$("#f-kind").onclick=e=>{const b=e.target.closest("button");if(b){state.kind=b.dataset.v;state.campaign="All";render()}};
+function filtered(){
+  const q=state.q.trim().toLowerCase();
+  return ads.filter(a=>(state.account==="All"||a.account===state.account)&&(state.kind==="All"||a.kind===state.kind)
+    &&(state.campaign==="All"||a.campaign===state.campaign)&&(state.unserved||a.served)&&(!q||a.text.includes(q)));
+}
+function renderList(list){
+  const el=$("#list");
+  if(!list.length){el.innerHTML=`<div class="empty">No ads match these filters.</div>`;return}
+  const groups=new Map();
+  list.forEach(a=>{if(!groups.has(a.campaign))groups.set(a.campaign,[]);groups.get(a.campaign).push(a)});
+  el.innerHTML=[...groups].map(([camp,items])=>{
+    items.sort((a,b)=>(b.served-a.served)||((b.impressions||0)-(a.impressions||0)));
+    return `<div class="grp"><span>${esc(camp)}</span><span>${esc(items[0].account)}</span></div>`+items.map(a=>{
+      const sub=a.adGroup?(a.headlines||[])[0]||"":(a.headlines||[])[1]||"";
+      const right=a.impressions?`<span class="mono">${fmt(a.impressions)}</span>`:a.strength?`<span class="str sm ${strengthKey(a.strength)}">${esc(a.strength)}</span>`:"";
+      return `<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
+        <span class="t">${esc(a.title)}</span>
+        <span class="s">${a.served?"":"Not served · "}${esc(sub)}</span>
+        <span class="r"><span class="kind ${a.kind}">${KIND[a.kind]}</span>${right}</span></button>`;
+    }).join("");
+  }).join("");
+}
+$("#list").addEventListener("click",e=>{
+  const b=e.target.closest(".item");if(!b)return;select(b.dataset.id);
+  if(matchMedia("(max-width:960px)").matches)$("#detail").scrollIntoView({behavior:"smooth",block:"start"});
+});
+function select(id){state.sel=id;state.combo=0;state.pcat="TEXT";try{history.replaceState(null,"","#ad-"+id)}catch(e){}render()}
+
+/* ---------- detail ---------- */
+function assetTable(title,items,limit,usage,type){
+  if(!items||!items.length)return "";
+  const rows=items.map(t=>{
+    const u=usage&&usage.get(type,t),len=[...t].length;
+    let share="";
+    if(usage&&usage.total){const pct=u?Math.round(u.imp/usage.total*100):0;share=`<div class="share"><span class="mono">${u?pct+"%":"not served"}</span><span class="b"><i style="width:${pct}%"></i></span></div>`}
+    else if(usage)share=`<span class="mono">${u?u.n:0} / ${usage.combos}</span>`;
+    return `<tr class="${usage&&!u?"off":""}"><td>${esc(t)}</td><td class="num"><span class="mono cc${len>limit?" hi":""}">${len}/${limit}</span></td>${usage?`<td class="num">${share}</td>`:""}</tr>`;
+  }).join("");
+  const sh=!usage?"":`<th class="num">${usage.total?"Impr. share":"In top combos"}</th>`;
+  return `<div><h3>${esc(title)} · ${items.length}</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Asset</th><th class="num">Chars</th>${sh}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+function servedTexts(ad,pred){const s=new Set();ad.combos.forEach(c=>c.parts.forEach(p=>{if(pred(p.f)&&p.x)s.add(p.x)}));return[...s]}
+function seg(key,opts){return `<div class="seg" data-key="${key}" role="group">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${state[key]===v}">${l}</button>`).join("")}</div>`}
+
+function renderDetail(){
+  const el=$("#detail"),ad=ads.find(a=>a.id===state.sel);
+  if(!ad){el.innerHTML=`<div class="panel empty">Pick an ad on the left to see its previews.</div>`;return}
+  const combos=combosOf(ad);if(state.combo>=combos.length)state.combo=0;
+  const combo=combos[state.combo],real=ad.combos.length>0,usage=real?assetUsage(ad):null;
+  const range=DATA.dateRange.toLowerCase();
+  const note=real
+    ?(ad.kind==="PMAX"?`Real top combinations reported by Google for this asset group (${esc(range)}). Google ranks them but doesn't report impressions per combination.`
+      :`Real combinations Google served in the ${esc(range)}, ranked by impressions.`)
+    :ad.kind==="DG"?`Simulated. Google doesn't report served combinations for Demand Gen, so these rotate the ad's own headlines and descriptions. Image and video assets aren't in the sheet.`
+    :`No impressions in the ${esc(range)}, so these previews are simulated from the ad's assets in the sheet.`;
+
+  let ctrls="";
+  if(ad.kind==="PMAX")ctrls+=seg("pcat",[["TEXT","Search"],["IMAGE","Display & Discover"],["VIDEO","YouTube"]]);
+  if(ad.kind==="PMAX"&&state.pcat==="IMAGE")ctrls+=seg("pfmt",[["display","Display"],["discover","Discover"]]);
+  if(ad.kind==="RSA"||(ad.kind==="PMAX"&&state.pcat==="TEXT"))ctrls+=seg("device",[["desktop","Desktop"],["mobile","Mobile"]]);
+  if(ad.kind==="DG")ctrls+=seg("dgfmt",[["discover","Discover"],["gmail","Gmail"],["youtube","YouTube"]]);
+
+  const maxImp=Math.max(1,...combos.map(c=>c.imp||0));
+  const clist=combos.map((c,i)=>{
+    const P=c.parts,txt=(ad.kind==="PMAX"&&c.cat!=="TEXT")?(textOf(P,/^LONG_HEADLINE/)||heads(P)[0]||""):heads(P).join(" | ");
+    const hasImp=c.imp!=null;
+    return `<button type="button" class="combo" data-i="${i}" aria-pressed="${i===state.combo}"><span class="rk">#${c.rank}</span><span class="tx" title="${esc(txt)}">${esc(txt||"(no headline)")}${descs(P)[0]?`<span class="d"> — ${esc(descs(P)[0])}</span>`:""}</span><span class="im mono">${hasImp?fmt(c.imp):""}</span>${hasImp?`<span class="bar"><i style="width:${(c.imp/maxImp*100).toFixed(1)}%"></i></span>`:""}</button>`;
+  }).join("")||`<div class="empty">None in this format.</div>`;
+  const share=combo&&combo.imp!=null&&ad.impressions?` · <b class="mono">${Math.round(combo.imp/ad.impressions*100)}%</b> of this ad's impressions`:"";
+
+  let assets;
+  if(ad.kind==="PMAX"){
+    assets=`<div class="acols">${assetTable("Headlines",ad.headlines,LIMIT.headline,usage,"HEADLINE")}${assetTable("Long headlines",ad.longHeadlines,LIMIT.long,usage,"LONG_HEADLINE")}${assetTable("Descriptions",ad.descriptions,LIMIT.description,usage,"DESCRIPTION")}</div>`;
+    if(ad.images&&ad.images.length)assets+=`<div class="sect"><h3>Images served · ${ad.images.length}</h3><div class="gallery">${ad.images.map(i=>`<figure><img src="${esc(i.img)}" alt=""><figcaption>${esc(i.f.toLowerCase().replace(/_/g," "))}</figcaption></figure>`).join("")}</div></div>`;
+    if(ad.videoThumbs&&ad.videoThumbs.length)assets+=`<div class="sect"><h3>Videos · ${ad.videoThumbs.length}</h3><div class="gallery">${ad.videoThumbs.map(v=>`<figure><a href="https://www.youtube.com/watch?v=${esc(v.vid)}" target="_blank" rel="noopener" title="Open on YouTube"><img src="${esc(v.img)}" alt="YouTube video ${esc(v.vid)}"></a><figcaption class="mono">${esc(v.vid)}</figcaption></figure>`).join("")}</div></div>`;
+    if(ad.themes&&ad.themes.length)assets+=`<div class="sect"><h3>Search themes · ${ad.themes.length}</h3><div class="chips">${ad.themes.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div>`;
+  }else{
+    assets=`<div class="acols">${assetTable("Headlines",ad.headlines,LIMIT.headline,usage,"HEADLINE")}${assetTable("Descriptions",ad.descriptions,LIMIT.description,usage,"DESCRIPTION")}</div>`;
+    if(real){
+      const sl=servedTexts(ad,f=>f==="SITELINK"||/^HEADLINE_AS_SITELINK/.test(f)),co=servedTexts(ad,f=>f==="CALLOUT");
+      if(sl.length||co.length)assets+=`<div class="acols sect">${assetTable("Sitelinks served",sl,LIMIT.sitelink,usage,"SITELINK")}${assetTable("Callouts served",co,LIMIT.callout,usage,"CALLOUT")}</div>`;
+    }
+  }
+  const usageLabel=usage?(usage.total?" · share of impressions across served combinations":" · appearances in Google's top combinations"):"";
+
+  el.innerHTML=`
+  <div class="panel">
+    <div class="crumb"><span>${esc(ad.account)}</span><span>${esc(ad.campaign)}</span>${ad.adGroup?`<span>${esc(ad.adGroup)}</span>`:""}</div>
+    <h2>${esc(ad.adGroup||(ad.headlines||[])[0]||ad.campaign)}</h2>
+    <div class="meta">
+      <span class="kind ${ad.kind}">${KIND[ad.kind]}</span>
+      <span class="str ${ad.strength?strengthKey(ad.strength):"none"}">Ad strength: ${esc(ad.strength||"not in sheet")}</span>
+      ${ad.impressions?`<span><b class="mono">${fmt(ad.impressions)}</b> impressions</span>`:""}
+      ${ad.kind==="RSA"&&/^\d+$/.test(ad.id)?`<span class="mono" style="font-size:12px">Ad ID ${esc(ad.id)}</span>`:""}
+      ${ad.finalUrl?`<a href="${esc(ad.finalUrl)}" target="_blank" rel="noopener">Landing page ↗</a>`:""}
+    </div>
+    <div class="note${real?" real":""}">${note}</div>
+  </div>
+  <div class="panel">
+    <div class="phead"><h3>Preview</h3><div class="bar">${ctrls}</div></div>
+    <div class="pgrid">
+      <div><div class="stage">${renderPreview(ad,combo)}</div>
+        <div class="stepper"><button type="button" data-step="-1" aria-label="Previous combination">‹</button><span>Combination <b class="mono">${combos.length?state.combo+1:0}</b> of <b class="mono">${combos.length}</b>${share}</span><button type="button" data-step="1" aria-label="Next combination">›</button></div>
+      </div>
+      <div><h3>${real?"Ranked combinations":"Simulated combinations"}</h3><div class="combos">${clist}</div></div>
+    </div>
+  </div>
+  <div class="panel"><h3 style="margin-bottom:16px">Assets${usageLabel}</h3>${assets}</div>`;
+}
+$("#detail").addEventListener("click",e=>{
+  const s=e.target.closest(".seg[data-key] button");
+  if(s){const k=s.parentElement.dataset.key;state[k]=s.dataset.v;if(k==="pcat")state.combo=0;if(k==="device")store.set("device",state.device);renderDetail();return}
+  const c=e.target.closest(".combo");if(c){state.combo=+c.dataset.i;renderDetail();return}
+  const st=e.target.closest("[data-step]");
+  if(st){const ad=ads.find(a=>a.id===state.sel),n=combosOf(ad).length;if(n){state.combo=(state.combo+Number(st.dataset.step)+n)%n;renderDetail()}}
+});
+document.addEventListener("keydown",e=>{
+  if(e.target.matches("input,select,textarea"))return;
+  if(e.key==="ArrowRight"||e.key==="ArrowLeft"){const b=document.querySelector(`[data-step="${e.key==="ArrowRight"?1:-1}"]`);if(b)b.click()}
+});
+
+/* ---------- header + render ---------- */
+function renderHeader(){
+  $("#client").textContent=DATA.client;
+  const exp=new Date(DATA.exportedAt.replace(" ","T"));
+  const when=isNaN(exp)?DATA.exportedAt:exp.toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  $("#fresh").innerHTML=`<span>Google combinations · <b>${esc(DATA.dateRange)}</b></span><span>Exported from Google Ads <b>${esc(when)}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>`;
+  const rsa=ads.filter(a=>a.kind==="RSA"),served=rsa.filter(a=>a.served);
+  const stats=[[served.length,"Search ads served"],[served.reduce((s,a)=>s+a.impressions,0),"Search impressions"],
+    [ads.reduce((s,a)=>s+a.combos.length,0),"Real combinations"],[ads.filter(a=>a.kind==="PMAX").length,"PMax asset groups"],
+    [ads.filter(a=>a.kind==="DG").length,"Demand Gen ads · simulated"],[rsa.length-served.length,"Search ads not served"]];
+  $("#stats").innerHTML=stats.map(([n,l])=>`<div class="stat"><span class="n">${fmt(n)}</span><span class="l">${l}</span></div>`).join("");
+}
+function render(){
+  const accts=[...new Set(ads.map(a=>a.account))].sort();
+  segBtns($("#f-account"),[["All","All accounts"],...accts.map(a=>[a,a])],"account");
+  segBtns($("#f-kind"),[["All","All types"],["RSA","Search"],["PMAX","PMax"],["DG","Demand Gen"]],"kind");
+  const pool=ads.filter(a=>(state.account==="All"||a.account===state.account)&&(state.kind==="All"||a.kind===state.kind));
+  const camps=[...new Set(pool.map(a=>a.campaign))].sort();
+  $("#f-campaign").innerHTML=`<option value="All">All campaigns (${camps.length})</option>`+camps.map(c=>`<option value="${esc(c)}"${c===state.campaign?" selected":""}>${esc(c)}</option>`).join("");
+  const list=filtered();
+  if(!list.some(a=>a.id===state.sel))state.sel=((list.find(a=>a.served)||list[0])||{}).id||null;
+  renderList(list);renderDetail();
+}
+$("#f-campaign").onchange=e=>{state.campaign=e.target.value;render()};
+$("#f-q").oninput=e=>{state.q=e.target.value;render()};
+$("#f-unserved").onchange=e=>{state.unserved=e.target.checked;render()};
+const hm=location.hash.match(/^#ad-(.+)$/);
+if(hm&&ads.some(a=>a.id===hm[1]))state.sel=hm[1];
+else{const top=ads.filter(a=>a.served&&a.kind==="RSA").sort((a,b)=>b.impressions-a.impressions)[0];if(top)state.sel=top.id}
+renderHeader();render();
+</script>

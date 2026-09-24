@@ -24,17 +24,18 @@ link-shared so it downloads directly as xlsx).
 
 ## Phases
 
-- [ ] **Phase 1 — Data layer.** `fetch.py` downloads the sheet, normalises into
+- [x] **Phase 1 — Data layer.** `fetch.py` downloads the sheet, normalises into
   `ads.json`: account → campaign → ad (type, headlines, descriptions, long
   headlines, paths, CTA, videos, strength). Drop empty rows; attach search themes to PMax.
-- [ ] **Phase 2 — Asset view.** Dashboard with filters (account, campaign, ad type,
+- [x] **Phase 2 — Asset view.** Dashboard with filters (account, campaign, ad type,
   ad strength) and per-ad asset lists with char counts.
-- [ ] **Phase 3 — Combination previews.** For each ad, render Google-style previews:
+- [x] **Phase 3 — Combination previews.** For each ad, render Google-style previews:
   - RSA: Search (desktop + mobile) — 3 headlines + 2 descriptions, shuffle / step through combos.
   - PMax: Search, Display, YouTube, Discover, Gmail formats.
   - Demand Gen: Discover, Gmail, YouTube formats.
   Source of combinations = see decision below.
-- [ ] **Phase 4 — Publish + refresh.** Publish as a claude.ai artifact; daily
+- [~] **Phase 4 — Publish + refresh.** Published 2026-09-24: https://claude.ai/artifact/7twhTA9oxw8dU81Z7xwjLB
+  (`build.py` → dist/, copy to scratchpad, republish index.html; assets are URL-hashed so only new images need uploading). Daily auto-rebuild not set up yet. Publish as a claude.ai artifact; daily
   refresh after Supermetrics runs.
 - [ ] **Phase 5 — More clients** (same sheet template per client).
 
