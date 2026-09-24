@@ -63,6 +63,10 @@ class Assets:
         if url in self.cache:
             return self.cache[url]
         key = hashlib.sha1(url.encode()).hexdigest()[:16]
+        cached = next(self.dir.glob(f"{key}.*"), None)  # assets are immutable per URL
+        if cached:
+            self.cache[url] = f"assets/{cached.name}"
+            return self.cache[url]
         try:
             data, ctype = fetch(url)
             ext = {"image/png": "png", "image/gif": "gif", "image/webp": "webp"}.get(ctype.split(";")[0], "jpg")
@@ -237,7 +241,9 @@ def main():
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8")
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)
-    (DIST / "index.html").write_text(html, encoding="utf-8")
+    tmp = DIST / "index.html.tmp"
+    tmp.write_text(html, encoding="utf-8")
+    tmp.replace(DIST / "index.html")  # atomic swap: the web server never serves a half-written page
     (DIST / "data.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
 
     kinds = defaultdict(int)

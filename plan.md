@@ -64,3 +64,9 @@ B. **Real** — Google's own top combinations (Assets → Combinations report;
 - [ ] User schedules the script Daily (after ~9am IST Supermetrics refresh).
   Note: only 13/959 RSA combos show a 3rd headline; Google mostly serves 2H + sitelinks.
 - Demand Gen: no combination API exists → shown as simulated previews, labelled as such.
+
+## Hosting on Railway (2026-09-24)
+- Deploys from `ai-positon2/Ad_Dashboard`. Railpack detects Python via `requirements.txt`; `railway.json` sets
+  start command `python main.py` and healthcheck `/healthz`.
+- `main.py` builds on boot, serves `dist/`, rebuilds every `REBUILD_HOURS` (default 3) — this is the daily refresh.
+- Optional `DASH_PASSWORD` env var puts the site behind a password (any username). The Railway URL is public otherwise.
