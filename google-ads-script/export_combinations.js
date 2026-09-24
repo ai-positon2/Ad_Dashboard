@@ -87,8 +87,11 @@ function writeAll(results) {
     pmaxRows = pmaxRows.concat(d.pmax);
   });
   var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-  writeTab(ss, 'RSA Combinations', RSA_HEADER, rsaRows);
-  writeTab(ss, 'PMax Combinations', PMAX_HEADER, pmaxRows);
+  // Never wipe a tab with an empty result — a failed run keeps the last good data.
+  if (rsaRows.length) writeTab(ss, 'RSA Combinations', RSA_HEADER, rsaRows);
+  else Logger.log('No RSA rows — left "RSA Combinations" untouched.');
+  if (pmaxRows.length) writeTab(ss, 'PMax Combinations', PMAX_HEADER, pmaxRows);
+  else Logger.log('No PMax rows — left "PMax Combinations" untouched.');
   Logger.log('Wrote ' + rsaRows.length + ' RSA and ' + pmaxRows.length + ' PMax combination rows.');
 }
 
@@ -154,34 +157,59 @@ function fetchPmax(ctx) {
   return out;
 }
 
-/** Looks up only the given asset resource names, in batches. */
+/**
+ * Looks up only the given asset resource names, in batches.
+ * The base query (text / image / video / CTA) is the one proven to work; extension
+ * text (sitelinks, callouts, snippets) is fetched in separate per-type queries so a
+ * failure there only loses that extension type, never the whole account.
+ */
 function loadAssets(names) {
   var map = {};
-  for (var i = 0; i < names.length; i += ASSET_BATCH) {
-    var inList = names.slice(i, i + ASSET_BATCH).map(function (n) { return "'" + n + "'"; }).join(', ');
-    var rows = AdsApp.search('SELECT asset.resource_name, asset.type, asset.text_asset.text, ' +
-      'asset.image_asset.full_size.url, asset.youtube_video_asset.youtube_video_id, ' +
-      'asset.call_to_action_asset.call_to_action, asset.sitelink_asset.link_text, ' +
-      'asset.sitelink_asset.description1, asset.sitelink_asset.description2, ' +
-      'asset.callout_asset.callout_text, asset.structured_snippet_asset.header, ' +
-      'asset.structured_snippet_asset.values ' +
-      'FROM asset WHERE asset.resource_name IN (' + inList + ')');
-    while (rows.hasNext()) {
-      var a = rows.next().asset;
-      var sl = a.sitelinkAsset || {}, ss = a.structuredSnippetAsset || {};
+  runBatched(names, 'base',
+    'asset.resource_name, asset.type, asset.text_asset.text, asset.image_asset.full_size.url, ' +
+    'asset.youtube_video_asset.youtube_video_id, asset.call_to_action_asset.call_to_action', '',
+    function (a) {
       map[a.resourceName] = {
         type: a.type,
-        text: (a.textAsset && a.textAsset.text) || sl.linkText ||
-          (a.calloutAsset && a.calloutAsset.calloutText) ||
-          (ss.header ? ss.header + ': ' + (ss.values || []).join(', ') : ''),
-        lines: [sl.description1, sl.description2].filter(Boolean),
+        text: (a.textAsset && a.textAsset.text) || '',
         url: (a.imageAsset && a.imageAsset.fullSize && a.imageAsset.fullSize.url) || '',
         video: (a.youtubeVideoAsset && a.youtubeVideoAsset.youtubeVideoId) || '',
         cta: (a.callToActionAsset && a.callToActionAsset.callToAction) || ''
       };
-    }
-  }
+    });
+  var entry = function (a) { return map[a.resourceName] = map[a.resourceName] || { type: a.type }; };
+  runBatched(names, 'sitelinks',
+    'asset.resource_name, asset.sitelink_asset.link_text, asset.sitelink_asset.description1, ' +
+    'asset.sitelink_asset.description2', " AND asset.type = 'SITELINK'",
+    function (a) {
+      var s = a.sitelinkAsset || {}, e = entry(a);
+      e.text = s.linkText || '';
+      e.lines = [s.description1, s.description2].filter(Boolean);
+    });
+  runBatched(names, 'callouts', 'asset.resource_name, asset.callout_asset.callout_text',
+    " AND asset.type = 'CALLOUT'",
+    function (a) { entry(a).text = (a.calloutAsset && a.calloutAsset.calloutText) || ''; });
+  runBatched(names, 'snippets',
+    'asset.resource_name, asset.structured_snippet_asset.header, asset.structured_snippet_asset.values',
+    " AND asset.type = 'STRUCTURED_SNIPPET'",
+    function (a) {
+      var s = a.structuredSnippetAsset || {};
+      entry(a).text = s.header ? s.header + ': ' + (s.values || []).join(', ') : '';
+    });
   return map;
+}
+
+function runBatched(names, label, fields, extraWhere, onAsset) {
+  try {
+    for (var i = 0; i < names.length; i += ASSET_BATCH) {
+      var inList = names.slice(i, i + ASSET_BATCH).map(function (n) { return "'" + n + "'"; }).join(', ');
+      var rows = AdsApp.search('SELECT ' + fields + ' FROM asset WHERE asset.resource_name IN (' +
+        inList + ')' + extraWhere);
+      while (rows.hasNext()) onAsset(rows.next().asset);
+    }
+  } catch (e) {
+    Logger.log('Asset lookup "' + label + '" failed (continuing without it): ' + e);
+  }
 }
 
 function resolve(usages, assets) {
