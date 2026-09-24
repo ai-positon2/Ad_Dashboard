@@ -7,7 +7,7 @@
  *
  * Run it either:
  *   - in a single Google Ads account (leave ACCOUNT_IDS empty), or
- *   - at MCC level, listing the client accounts in ACCOUNT_IDS (they run in parallel).
+ *   - at MCC level — all client accounts run in parallel (or only those in ACCOUNT_IDS).
  * Schedule: Daily, after Supermetrics refreshes the ad-copy sheet.
  *
  * Speed notes: only assets that actually appear in a combination are looked up
@@ -18,7 +18,7 @@
  */
 
 var SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1lMWQI2RECyNgFqwHZ6r2gs0WhA3EsOvj2uha9Qwu-70/edit';
-var ACCOUNT_IDS = [];          // e.g. ['123-456-7890', '234-567-8901'] when run from an MCC
+var ACCOUNT_IDS = [];          // MCC only: leave empty for all client accounts, or limit e.g. ['123-456-7890']
 var DATE_RANGE = 'LAST_30_DAYS';
 var MAX_RSA_COMBOS = 20;       // top-N combinations kept per RSA (by impressions)
 var MAX_PMAX_COMBOS = 20;      // top-N combinations kept per asset group
@@ -32,8 +32,11 @@ var PMAX_HEADER = ['Account', 'Customer ID', 'Campaign', 'Asset group', 'Asset g
   'Business name', 'Call to action', 'Images', 'Logos', 'Videos', 'Assets JSON', 'Date range', 'Exported at'];
 
 function main() {
-  if (ACCOUNT_IDS.length && typeof AdsManagerApp !== 'undefined') {
-    AdsManagerApp.accounts().withIds(ACCOUNT_IDS).executeInParallel('processAccount', 'writeAll');
+  if (typeof AdsManagerApp !== 'undefined') {
+    // Running at MCC level: use ACCOUNT_IDS if given, otherwise every client account under it.
+    var sel = AdsManagerApp.accounts();
+    if (ACCOUNT_IDS.length) sel = sel.withIds(ACCOUNT_IDS);
+    sel.executeInParallel('processAccount', 'writeAll');
   } else {
     writeAll([{ getStatus: function () { return 'OK'; }, getReturnValue: processAccount }]);
   }
