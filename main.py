@@ -131,6 +131,10 @@ def write_summary(facts):
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
+                      ".html": "text/html; charset=utf-8", ".json": "application/json; charset=utf-8",
+                      ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8"}
+
     def do_GET(self):
         if self.path == "/healthz":
             return self._send(200, f"ok last_build={status['last_ok']} error={status['last_error']}".encode(),
@@ -148,7 +152,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def _summary(self):
         def reply(code, obj):
-            self._send(code, json.dumps(obj).encode(), "application/json")
+            self._send(code, json.dumps(obj).encode(), "application/json; charset=utf-8")
 
         if not OPENAI_KEY:
             return reply(503, {"error": "The AI summary isn't switched on yet: OPENAI_API_KEY isn't set on the server."})

@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>Tealium Ad Previews</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -258,7 +259,9 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 .sum .shd{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:18px 20px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface);z-index:1}
 .sum .shd h2{font:600 19px/1.2 var(--display);margin:0}
 .sum .shd .sub{font-size:12px;color:var(--muted);margin-top:3px}
-.sum .x{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:32px;height:32px;font-size:18px;line-height:1}
+.sum .back{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px 6px 9px;font-size:13px;font-weight:600}
+.sum .back:hover{border-color:var(--faint)}
+.sum .back svg{width:15px;height:15px}
 .sum .sbody{padding:18px 20px 22px;display:flex;flex-direction:column;gap:18px}
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 @media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -712,8 +715,8 @@ function renderSummary(){
   if(perf.length){
     const cost=sum("d30","cost"),conv=sum("d30","conv"),clicks=sum("d30","clicks"),impr=sum("d30","impr");
     const live=perf.reduce((s,p)=>s+p.liveAds,0);
-    kpis=[["Live ads",fmt(live),`across ${perf.length} enabled campaigns`],["Spend · last 30 days",money(cost,cur),`${money(sum("mtd","cost"),cur)} this month`],
-      ["Clicks · last 30 days",fmt(clicks),impr?`${(clicks/impr*100).toFixed(2)}% click-through rate`:""],["Conversions · last 30 days",fmt(Math.round(conv*10)/10),`${fmt(Math.round(sum("mtd","conv")*10)/10)} this month`],
+    kpis=[["Live ads",fmt(live),`across ${perf.length} enabled campaigns`],["Spend (last 30 days)",money(cost,cur),`${money(sum("mtd","cost"),cur)} this month`],
+      ["Clicks (last 30 days)",fmt(clicks),impr?`${(clicks/impr*100).toFixed(2)}% click-through rate`:""],["Conversions (last 30 days)",fmt(Math.round(conv*10)/10),`${fmt(Math.round(sum("mtd","conv")*10)/10)} this month`],
       ["Cost per conversion",conv?money(cost/conv,cur):"—","last 30 days"],["Search impressions",fmt(served.reduce((s,a)=>s+a.impressions,0)),`${served.length} Search ads served`]];
     const byCh=new Map();perf.forEach(p=>byCh.set(p.channel,(byCh.get(p.channel)||0)+p.liveAds));
     const chRows=[...byCh].filter(([,v])=>v).sort((a,b)=>b[1]-a[1]).map(([c,v])=>({label:CHANNEL[c]||c,v,tip:`${CHANNEL[c]||c}: ${v} live ads${c==="PERFORMANCE_MAX"?" (asset groups)":""}`}));
@@ -731,7 +734,7 @@ function renderSummary(){
   const asOf=DATA.perfExportedAt||DATA.exportedAt;
   dlg.innerHTML=`<div class="shd"><div><h2>${esc(DATA.client)} account summary</h2><div class="sub">Data as of ${esc(asOf)} · ${esc(acc==="All"?"all accounts":acc)}</div></div>
       <div class="bar">${`<div class="seg" id="sumAcct" role="group" aria-label="Account">${[["All","All accounts"],...accts.map(a=>[a,a])].map(([v,l])=>`<button type="button" data-v="${esc(v)}" aria-pressed="${acc===v}">${esc(l)}</button>`).join("")}</div>`}
-      <button type="button" class="x" id="sumClose" aria-label="Close summary">×</button></div></div>
+      <button type="button" class="back" id="sumClose"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>Back to dashboard</button></div></div>
     <div class="sbody">${warn}
       <div class="kpis">${kpis.map(([l,v,d])=>`<div class="kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div>${d?`<div class="d">${esc(d)}</div>`:""}</div>`).join("")}</div>
       ${charts}
