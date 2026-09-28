@@ -4,7 +4,7 @@
 
 Env vars
     PORT            port to listen on (Railway sets this)
-    REBUILD_HOURS   hours between rebuilds from the sheet (default 3)
+    REBUILD_HOURS   hours between rebuilds from the sheet (default 3); /api/rebuild rebuilds now
     DASH_PASSWORD   optional; when set, the site asks for a password (any username)
     OPENAI_API_KEY  enables the AI-written account summary (/api/summary). Never commit it.
     OPENAI_MODEL    optional, default gpt-4o-mini
@@ -32,10 +32,15 @@ DIST = build.DIST
 status = {"last_ok": None, "last_error": None}
 summary_cache = {}  # (build time, account) -> text: at most one OpenAI call per build per account
 summary_lock = threading.Lock()
+rebuild_now = threading.Event()  # set by /api/rebuild to skip the wait
 
 BUILDING_PAGE = b"""<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="10">
 <title>Ad previews</title><body style="font:16px system-ui;padding:40px;color:#333">
 <p>Building the dashboard from the Google Sheet. This page refreshes in a few seconds.</p>"""
+REFRESH_PAGE = b"""<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="75;url=/">
+<title>Ad previews</title><body style="font:16px system-ui;padding:40px;color:#333">
+<p>Re-reading the Google Sheet. The dashboard reloads with the new data in about a minute.</p>
+<p><a href="/">Back to the dashboard now</a></p>"""
 
 
 def rebuild_loop():
@@ -47,7 +52,8 @@ def rebuild_loop():
         except BaseException as e:  # build.main() uses SystemExit for a missing tab; keep serving the last good build
             status["last_error"] = f"{type(e).__name__}: {e}"
             traceback.print_exc()
-        time.sleep(REBUILD_HOURS * 3600)
+        rebuild_now.wait(REBUILD_HOURS * 3600)
+        rebuild_now.clear()
 
 
 # ------------------------------------------------------------ account summary
@@ -144,6 +150,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header("WWW-Authenticate", 'Basic realm="Ad previews"')
             self.end_headers()
             return
+        if self.path.startswith("/api/rebuild"):
+            rebuild_now.set()
+            return self._send(202, REFRESH_PAGE, "text/html; charset=utf-8")
         if self.path.startswith("/api/summary"):
             return self._summary()
         if not (DIST / "index.html").exists():

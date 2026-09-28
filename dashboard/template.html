@@ -56,6 +56,7 @@ button{cursor:pointer}
 .top h1 span{color:var(--accent)}
 .fresh{color:var(--muted);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 16px}
 .fresh b{color:var(--ink);font-weight:600}
+.fresh .refresh{color:var(--accent,var(--ink));font-weight:600;text-decoration:underline;text-underline-offset:2px}
 .ctitle{font-size:13px;font-weight:600;margin:0 0 2px}
 .csub{font-size:12px;color:var(--muted);margin:0 0 12px}
 /* horizontal bar chart */
@@ -607,7 +608,7 @@ function renderHeader(){
   $("#client").textContent=DATA.client;
   const exp=new Date(DATA.exportedAt.replace(" ","T"));
   const when=isNaN(exp)?DATA.exportedAt:exp.toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-  $("#fresh").innerHTML=`<span>Google combinations · <b>${esc(DATA.dateRange)}</b></span><span>Exported from Google Ads <b>${esc(when)}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>`;
+  $("#fresh").innerHTML=`<span>Google combinations · <b>${esc(DATA.dateRange)}</b></span><span>Exported from Google Ads <b>${esc(when)}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname)?`<a class="refresh" href="api/rebuild">Refresh from sheet</a>`:""}`;
 }
 function render(){
   const accts=[...new Set(ads.map(a=>a.account))].sort();
