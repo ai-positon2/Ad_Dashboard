@@ -6,7 +6,8 @@
  *     - Responsive search ads: headlines + descriptions (with pins), paths, final URL
  *     - Demand Gen ads: headlines, descriptions, images, logos, videos, business name, CTA
  *     - Performance Max asset groups: every enabled asset-group asset
- *     - Sitelinks, callouts, structured snippets, business logo and business name
+ *     - Sitelinks, callouts, structured snippets, image extensions, prices, promotions, calls, apps,
+ *       business logo and business name
  *       at account, campaign and ad-group level
  *
  * Install as its own script at the MCC (it finds every client account by itself), schedule Daily.
@@ -133,11 +134,45 @@ function processAccount() {
     ['AD_GROUP', 'ad_group_asset', 'campaign.name, campaign.advertising_channel_type, ad_group.name, ',
       " AND campaign.status = 'ENABLED' AND ad_group.status = 'ENABLED'"]
   ];
+  var money = function (m) {
+    return m && m.amountMicros ? (Number(m.amountMicros) / 1e6).toLocaleString('en-US') + ' ' + (m.currencyCode || '') : '';
+  };
+  var pretty = function (s) { return String(s || '').toLowerCase().replace(/_/g, ' '); };
+  // [label, fields, filter, format(asset) -> {text, lines, img}]
   var TYPES = [
-    ['logo & name', "asset.type, asset.text_asset.text, asset.image_asset.full_size.url", " AND asset.type IN ('TEXT', 'IMAGE')"],
-    ['sitelinks', "asset.type, asset.sitelink_asset.link_text, asset.sitelink_asset.description1, asset.sitelink_asset.description2", " AND asset.type = 'SITELINK'"],
-    ['callouts', "asset.type, asset.callout_asset.callout_text", " AND asset.type = 'CALLOUT'"],
-    ['snippets', "asset.type, asset.structured_snippet_asset.header, asset.structured_snippet_asset.values", " AND asset.type = 'STRUCTURED_SNIPPET'"]
+    ['logo, name & image extensions', "asset.type, asset.text_asset.text, asset.image_asset.full_size.url",
+      " AND asset.type IN ('TEXT', 'IMAGE')",
+      function (a) { return { text: a.textAsset && a.textAsset.text, img: a.imageAsset && a.imageAsset.fullSize && a.imageAsset.fullSize.url }; }],
+    ['sitelinks', "asset.type, asset.sitelink_asset.link_text, asset.sitelink_asset.description1, asset.sitelink_asset.description2",
+      " AND asset.type = 'SITELINK'",
+      function (a) { var s = a.sitelinkAsset || {}; return { text: s.linkText, lines: [s.description1, s.description2] }; }],
+    ['callouts', "asset.type, asset.callout_asset.callout_text", " AND asset.type = 'CALLOUT'",
+      function (a) { return { text: (a.calloutAsset || {}).calloutText }; }],
+    ['snippets', "asset.type, asset.structured_snippet_asset.header, asset.structured_snippet_asset.values",
+      " AND asset.type = 'STRUCTURED_SNIPPET'",
+      function (a) { var s = a.structuredSnippetAsset || {}; return { text: s.header ? s.header + ': ' + (s.values || []).join(', ') : '' }; }],
+    ['prices', "asset.type, asset.price_asset.type, asset.price_asset.price_qualifier, asset.price_asset.price_offerings",
+      " AND asset.type = 'PRICE'",
+      function (a) {
+        var p = a.priceAsset || {};
+        return { text: pretty(p.type) || 'prices', lines: (p.priceOfferings || []).map(function (o) {
+          var unit = o.unit && o.unit !== 'UNSPECIFIED' ? ' ' + pretty(o.unit).replace('per ', '/ ') : '';
+          return o.header + ': ' + money(o.price) + unit + (o.description ? ' — ' + o.description : '');
+        }) };
+      }],
+    ['promotions', "asset.type, asset.promotion_asset.promotion_target, asset.promotion_asset.percent_off, " +
+      "asset.promotion_asset.money_amount_off, asset.promotion_asset.promotion_code, asset.promotion_asset.occasion",
+      " AND asset.type = 'PROMOTION'",
+      function (a) {
+        var p = a.promotionAsset || {};
+        var off = p.percentOff ? (Number(p.percentOff) / 10000) + '% off' : (p.moneyAmountOff ? money(p.moneyAmountOff) + ' off' : '');
+        return { text: [off, p.promotionTarget].filter(Boolean).join(' '),
+          lines: [p.promotionCode ? 'Code ' + p.promotionCode : '', p.occasion && p.occasion !== 'UNSPECIFIED' ? pretty(p.occasion) : ''] };
+      }],
+    ['calls', "asset.type, asset.call_asset.phone_number, asset.call_asset.country_code", " AND asset.type = 'CALL'",
+      function (a) { var c = a.callAsset || {}; return { text: c.phoneNumber, lines: [c.countryCode] }; }],
+    ['apps', "asset.type, asset.mobile_app_asset.link_text, asset.mobile_app_asset.app_id", " AND asset.type = 'MOBILE_APP'",
+      function (a) { var m = a.mobileAppAsset || {}; return { text: m.linkText, lines: [m.appId] }; }]
   ];
   LEVELS.forEach(function (lv) {
     var res = lv[1], camel = res.replace(/_([a-z])/g, function (m, c) { return c.toUpperCase(); });
@@ -146,14 +181,11 @@ function processAccount() {
         var it = AdsApp.search('SELECT ' + lv[2] + res + '.field_type, ' + tp[1] + ' FROM ' + res +
           ' WHERE ' + res + ".status = 'ENABLED'" + lv[3] + tp[2]);
         while (it.hasNext()) {
-          var r = it.next(), a = r.asset, sl = a.sitelinkAsset || {}, sn = a.structuredSnippetAsset || {};
+          var r = it.next(), f = tp[3](r.asset) || {};
           row({ level: lv[0], campaign: r.campaign ? r.campaign.name : '',
             channel: r.campaign ? r.campaign.advertisingChannelType : '', group: r.adGroup ? r.adGroup.name : '',
-            field: r[camel].fieldType, type: a.type,
-            text: (a.textAsset && a.textAsset.text) || sl.linkText || (a.calloutAsset && a.calloutAsset.calloutText) ||
-              (sn.header ? sn.header + ': ' + (sn.values || []).join(', ') : ''),
-            lines: [sl.description1, sl.description2].filter(Boolean),
-            img: a.imageAsset && a.imageAsset.fullSize && a.imageAsset.fullSize.url });
+            field: r[camel].fieldType, type: r.asset.type, text: f.text || '',
+            lines: (f.lines || []).filter(Boolean), img: f.img || '' });
         }
       });
     });

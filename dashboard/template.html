@@ -244,6 +244,11 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 .slist li{display:flex;flex-direction:column;padding:7px 0;border-bottom:1px solid var(--line)}
 .slist .st{font-size:13.5px;font-weight:600}
 .slist .sd{font-size:12.5px;color:var(--muted)}
+.glinks{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.glink{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--accent);border-radius:8px;padding:5px 11px}
+.glink:hover{background:var(--accent-soft)}
+.exp{font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 8px}
+.exp.bad{color:var(--s-poor);background:var(--s-poor-bg)}.exp.warn{color:var(--s-average);background:var(--s-average-bg)}
 </style>
 
 <div class="wrap">
@@ -327,6 +332,7 @@ function simCombos(ad){
       (x.sitelinks||[]).slice(0,4).forEach(s=>parts.push({f:"SITELINK",t:"SITELINK",x:s.x,l:s.l}));
       (x.callouts||[]).slice(0,4).forEach(c=>parts.push({f:"CALLOUT",t:"CALLOUT",x:c}));
       if((x.snippets||[])[0])parts.push({f:"STRUCTURED_SNIPPET",t:"STRUCTURED_SNIPPET",x:x.snippets[0]});
+      if((x.images||[]).length)parts.push({f:"AD_IMAGE",t:"IMAGE",img:x.images[i%x.images.length]});
     }
     out.push({rank:i+1,sim:true,parts});
   }
@@ -490,15 +496,34 @@ function gallery(title,items,video){
     ?`<figure><a href="https://www.youtube.com/watch?v=${esc(i.vid)}" target="_blank" rel="noopener" title="Watch on YouTube"><img src="${esc(i.img)}" alt="YouTube video ${esc(i.vid)}"></a><figcaption>Watch on YouTube ↗</figcaption></figure>`
     :`<figure><img src="${esc(i.img)}" alt="">${i.f?`<figcaption>${esc(i.f.toLowerCase().replace(/_/g," "))}</figcaption>`:""}</figure>`).join("")}</div></section>`;
 }
+function servedImages(ad,field){const s=new Set();ad.combos.forEach(c=>c.parts.forEach(p=>{if(p.f===field&&p.img)s.add(p.img)}));return[...s]}
+function detailList(title,items){
+  if(!items||!items.length)return "";
+  return `<section class="aset"><h3>${esc(title)} <span class="n">${items.length}</span></h3><ul class="slist">${items.map(s=>`<li><span class="st">${esc(s.x)}</span>${(s.l||[]).map(l=>`<span class="sd">${esc(l)}</span>`).join("")}</li>`).join("")}</ul></section>`;
+}
+function previewLinksFor(ad){
+  return (DATA.previewLinks||[]).filter(l=>l.campaign===ad.campaign&&(!l.group||l.group===ad.adGroup)&&(!l.adId||l.adId===ad.id));
+}
+function previewButtons(ad){
+  const links=previewLinksFor(ad);if(!links.length)return "";
+  const today=new Date(new Date().toDateString());
+  return `<div class="glinks">${links.map(l=>{
+    let badge="";
+    if(l.expires){const days=Math.round((new Date(l.expires)-today)/864e5);
+      badge=days<0?`<span class="exp bad">expired</span>`:days<=3?`<span class="exp warn">expires in ${days} day${days===1?"":"s"}</span>`:""}
+    return `<a class="glink" href="${esc(l.url)}" target="_blank" rel="noopener">Google's preview${l.format?` · ${esc(l.format)}`:""} ↗</a>${badge}`;
+  }).join("")}</div>`;
+}
 function assetsPanel(ad){
   const x=ad.ext||{},served=ad.combos.length>0;
   const sitelinks=(x.sitelinks&&x.sitelinks.length)?x.sitelinks:servedSitelinks(ad);
   const callouts=(x.callouts&&x.callouts.length)?x.callouts:servedTexts(ad,f=>f==="CALLOUT");
   const snippets=(x.snippets&&x.snippets.length)?x.snippets:servedTexts(ad,f=>f==="STRUCTURED_SNIPPET");
   const logo=logoFor(ad,[]),logos=(ad.logos&&ad.logos.length)?ad.logos:(logo?[logo]:[]);
+  const imgExt=(x.images&&x.images.length)?x.images:servedImages(ad,"AD_IMAGE");
   const brand=[bizName(ad,[])].filter(Boolean);
-  const text=`<div class="agrid">${textList("Headlines",ad.headlines,LIMIT.headline,ad.pins)}${textList("Long headlines",ad.longHeadlines,LIMIT.long)}${textList("Descriptions",ad.descriptions,LIMIT.description,ad.pins)}${sitelinkList(sitelinks)}${chipList("Callouts",callouts)}${chipList("Structured snippets",snippets)}${chipList("Business name",brand)}${ad.cta?chipList("Call to action",[prettyCta(ad.cta)]):""}</div>`;
-  const media=gallery("Images",ad.images)+gallery("Logos",logos.map(l=>({img:l})))+gallery("Videos",ad.videoThumbs,true)+(ad.themes&&ad.themes.length?chipList("Search themes",ad.themes):"");
+  const text=`<div class="agrid">${textList("Headlines",ad.headlines,LIMIT.headline,ad.pins)}${textList("Long headlines",ad.longHeadlines,LIMIT.long)}${textList("Descriptions",ad.descriptions,LIMIT.description,ad.pins)}${sitelinkList(sitelinks)}${chipList("Callouts",callouts)}${chipList("Structured snippets",snippets)}${detailList("Prices",x.prices)}${detailList("Promotions",x.promotions)}${detailList("Call",x.calls)}${detailList("App",x.apps)}${chipList("Business name",brand)}${ad.cta?chipList("Call to action",[prettyCta(ad.cta)]):""}</div>`;
+  const media=gallery("Images",ad.images)+gallery("Image extensions",imgExt.map(i=>({img:i})))+gallery("Logos",logos.map(l=>({img:l})))+gallery("Videos",ad.videoThumbs,true)+(ad.themes&&ad.themes.length?chipList("Search themes",ad.themes):"");
   const src=ad.live?`Live in Google Ads as of ${esc(DATA.liveExportedAt)}`
     :served?"Assets from the ad-copy sheet plus what Google served"
     :"Assets from the ad-copy sheet";
@@ -545,7 +570,7 @@ function renderDetail(){
     <div class="note${real?" real":""}">${note}</div>
   </div>
   <div class="panel">
-    <div class="phead"><h3>Preview</h3><div class="bar">${ctrls}</div></div>
+    <div class="phead"><h3>Preview</h3><div class="bar">${previewButtons(ad)}${ctrls}</div></div>
     <div class="pgrid">
       <div><div class="stage">${renderPreview(ad,combo)}</div>
         <div class="stepper"><button type="button" data-step="-1" aria-label="Previous combination">‹</button><span>Combination <b class="mono">${combos.length?state.combo+1:0}</b> of <b class="mono">${combos.length}</b>${share}</span><button type="button" data-step="1" aria-label="Next combination">›</button></div>

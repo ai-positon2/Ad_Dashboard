@@ -216,7 +216,10 @@ def build_demand_gen(sheet):
 
 
 # --------------------------------------------------------------- live assets
-EXT_TYPES = ("SITELINK", "CALLOUT", "STRUCTURED_SNIPPET", "BUSINESS_LOGO", "BUSINESS_NAME")
+EXT_TYPES = ("SITELINK", "CALLOUT", "STRUCTURED_SNIPPET", "AD_IMAGE", "PRICE", "PROMOTION", "CALL", "MOBILE_APP",
+             "BUSINESS_LOGO", "BUSINESS_NAME")
+LINE_TYPES = ("SITELINK", "PRICE", "PROMOTION", "CALL", "MOBILE_APP")  # text + detail lines
+IMAGE_EXT = ("AD_IMAGE", "BUSINESS_LOGO")
 IMAGE_FIELDS = ("MARKETING_IMAGE", "SQUARE_MARKETING_IMAGE", "PORTRAIT_MARKETING_IMAGE")
 LOGO_FIELDS = ("LOGO", "LANDSCAPE_LOGO", "BUSINESS_LOGO")
 
@@ -234,7 +237,8 @@ def read_live(tab, assets):
         if level in ("ACCOUNT", "CAMPAIGN", "AD_GROUP"):
             if field in EXT_TYPES:
                 key = (acct, level, camp if level != "ACCOUNT" else "", group if level == "AD_GROUP" else "")
-                item = {"x": text, "l": lines} if field == "SITELINK" else (assets.get(img) if field == "BUSINESS_LOGO" else text)
+                item = ({"x": text, "l": lines} if field in LINE_TYPES
+                        else assets.get(img) if field in IMAGE_EXT else text)
                 if item and item not in live["ext"][key][field]:
                     live["ext"][key][field].append(item)
             continue
@@ -275,7 +279,9 @@ def ext_for(live, account, campaign, group):
                 out[t] = vals
                 break
     return {"sitelinks": out.get("SITELINK", []), "callouts": out.get("CALLOUT", []),
-            "snippets": out.get("STRUCTURED_SNIPPET", []), "logo": (out.get("BUSINESS_LOGO") or [""])[0],
+            "snippets": out.get("STRUCTURED_SNIPPET", []), "images": out.get("AD_IMAGE", []),
+            "prices": out.get("PRICE", []), "promotions": out.get("PROMOTION", []), "calls": out.get("CALL", []),
+            "apps": out.get("MOBILE_APP", []), "logo": (out.get("BUSINESS_LOGO") or [""])[0],
             "business": (out.get("BUSINESS_NAME") or [""])[0]}
 
 
@@ -334,6 +340,32 @@ def account_logos(ads, live):
     return logos
 
 
+# ------------------------------------------------------------ preview links
+PREVIEW_DAYS = 14  # Google's shared preview links stop working after about two weeks
+
+
+def build_preview_links(tab):
+    """Rows: Campaign | Ad group or asset group (optional) | Ad ID (optional) | Format (optional) | URL | Created."""
+    if tab is None or tab.dropna(how="all").empty:
+        return []
+    col = {c.lower().strip(): c for c in tab.columns}
+    pick = lambda r, *names: next((clean(r[col[n]]) for n in names if n in col and clean(r[col[n]])), "")
+    out = []
+    for _, r in tab.iterrows():
+        url = pick(r, "url", "preview link", "link")
+        if not url.startswith("http"):
+            continue
+        created = pick(r, "created", "date", "added")
+        try:
+            made = pd.to_datetime(created, dayfirst=True).date()
+            expires = (made + pd.Timedelta(days=PREVIEW_DAYS)).isoformat()
+        except (ValueError, TypeError):
+            expires = ""
+        out.append({"campaign": pick(r, "campaign"), "group": pick(r, "ad group", "asset group", "ad group / asset group"),
+                    "adId": pick(r, "ad id"), "format": pick(r, "format", "type"), "url": url, "expires": expires})
+    return out
+
+
 # ----------------------------------------------------- campaign performance
 def build_performance(tab):
     """Spend/clicks/conversions per enabled campaign, from the Google Ads Script's tab."""
@@ -381,6 +413,7 @@ def main():
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "ads": ads,
         "logos": logos,
+        "previewLinks": build_preview_links(x.get("Preview Links")),
         "liveAssets": bool(live),
         "liveExportedAt": clean(x["Live Assets"]["Exported at"].iloc[0]) if live else "",
         "performance": build_performance(x.get("Campaign Performance")),
