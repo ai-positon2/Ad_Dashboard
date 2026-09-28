@@ -131,8 +131,10 @@ function processAccount() {
   // --- Extensions + business logo / name, at account, campaign and ad-group level (per asset type)
   var LEVELS = [
     ['ACCOUNT', 'customer_asset', '', ''],
-    ['CAMPAIGN', 'campaign_asset', 'campaign.name, campaign.advertising_channel_type, ', " AND campaign.status = 'ENABLED'"],
-    ['AD_GROUP', 'ad_group_asset', 'campaign.name, campaign.advertising_channel_type, ad_group.name, ',
+    ['CAMPAIGN', 'campaign_asset', 'campaign.name, campaign.status, campaign.advertising_channel_type, ',
+      " AND campaign.status = 'ENABLED'"],
+    ['AD_GROUP', 'ad_group_asset', 'campaign.name, campaign.status, campaign.advertising_channel_type, ad_group.name, ' +
+      'ad_group.status, ',
       " AND campaign.status = 'ENABLED' AND ad_group.status = 'ENABLED'"]
   ];
   var money = function (m) {
@@ -162,11 +164,11 @@ function processAccount() {
         }) };
       }],
     ['promotions', "asset.type, asset.promotion_asset.promotion_target, asset.promotion_asset.percent_off, " +
-      "asset.promotion_asset.money_amount_off, asset.promotion_asset.promotion_code, asset.promotion_asset.occasion",
+      "asset.promotion_asset.promotion_code, asset.promotion_asset.occasion",
       " AND asset.type = 'PROMOTION'",
       function (a) {
         var p = a.promotionAsset || {};
-        var off = p.percentOff ? (Number(p.percentOff) / 10000) + '% off' : (p.moneyAmountOff ? money(p.moneyAmountOff) + ' off' : '');
+        var off = p.percentOff ? (Number(p.percentOff) / 10000) + '% off' : '';
         return { text: [off, p.promotionTarget].filter(Boolean).join(' '),
           lines: [p.promotionCode ? 'Code ' + p.promotionCode : '', p.occasion && p.occasion !== 'UNSPECIFIED' ? pretty(p.occasion) : ''] };
       }],
