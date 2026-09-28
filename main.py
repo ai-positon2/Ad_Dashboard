@@ -35,10 +35,10 @@ summary_lock = threading.Lock()
 rebuild_now = threading.Event()  # set by /api/rebuild to skip the wait
 
 BUILDING_PAGE = b"""<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="10">
-<title>Ad previews</title><body style="font:16px system-ui;padding:40px;color:#333">
+<title>Ad Previews</title><body style="font:16px system-ui;padding:40px;color:#333">
 <p>Building the dashboard from the Google Sheet. This page refreshes in a few seconds.</p>"""
 REFRESH_PAGE = b"""<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="75;url=/">
-<title>Ad previews</title><body style="font:16px system-ui;padding:40px;color:#333">
+<title>Ad Previews</title><body style="font:16px system-ui;padding:40px;color:#333">
 <p>Re-reading the Google Sheet. The dashboard reloads with the new data in about a minute.</p>
 <p><a href="/">Back to the dashboard now</a></p>"""
 
@@ -147,7 +147,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                               "text/plain")
         if PASSWORD and not self._authorized():
             self.send_response(401)
-            self.send_header("WWW-Authenticate", 'Basic realm="Ad previews"')
+            self.send_header("WWW-Authenticate", 'Basic realm="Ad Previews"')
             self.end_headers()
             return
         if self.path.startswith("/api/rebuild"):
