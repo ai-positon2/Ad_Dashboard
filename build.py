@@ -345,24 +345,33 @@ PREVIEW_DAYS = 14  # Google's shared preview links stop working after about two 
 
 
 def build_preview_links(tab):
-    """Rows: Campaign | Ad group or asset group (optional) | Ad ID (optional) | Format (optional) | URL | Created."""
+    """Google 'External Preview' links the team pastes into the sheet (tab "URLS" or "Preview Links").
+
+    Columns: Campaign | Ad Group (or asset group) | Ad ID (optional) | Format | Desktop URL | Mobile URL | Created.
+    A single URL column also works. Each row is one ad; rows sharing a campaign + ad group are numbered.
+    """
     if tab is None or tab.dropna(how="all").empty:
         return []
     col = {c.lower().strip(): c for c in tab.columns}
     pick = lambda r, *names: next((clean(r[col[n]]) for n in names if n in col and clean(r[col[n]])), "")
-    out = []
+    out, seen = [], defaultdict(int)
     for _, r in tab.iterrows():
-        url = pick(r, "url", "preview link", "link")
-        if not url.startswith("http"):
-            continue
+        desktop = pick(r, "desktop url", "url", "preview link", "link")
+        mobile = pick(r, "mobile url")
+        if not (desktop.startswith("http") or mobile.startswith("http")):
+            continue  # rows still waiting for a link
         created = pick(r, "created", "date", "added")
         try:
             made = pd.to_datetime(created, dayfirst=True).date()
             expires = (made + pd.Timedelta(days=PREVIEW_DAYS)).isoformat()
         except (ValueError, TypeError):
-            expires = ""
-        out.append({"campaign": pick(r, "campaign"), "group": pick(r, "ad group", "asset group", "ad group / asset group"),
-                    "adId": pick(r, "ad id"), "format": pick(r, "format", "type"), "url": url, "expires": expires})
+            made, expires = None, ""
+        camp, group = pick(r, "campaign"), pick(r, "ad group", "asset group", "ad group / asset group")
+        seen[(camp, group)] += 1
+        out.append({"campaign": camp, "group": group, "adId": pick(r, "ad id"), "format": pick(r, "format", "type"),
+                    "n": seen[(camp, group)], "desktop": desktop if desktop.startswith("http") else "",
+                    "mobile": mobile if mobile.startswith("http") else "",
+                    "created": made.isoformat() if made else "", "expires": expires})
     return out
 
 
@@ -413,7 +422,7 @@ def main():
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "ads": ads,
         "logos": logos,
-        "previewLinks": build_preview_links(x.get("Preview Links")),
+        "previewLinks": build_preview_links(x.get("URLS", x.get("Preview Links"))),
         "liveAssets": bool(live),
         "liveExportedAt": clean(x["Live Assets"]["Exported at"].iloc[0]) if live else "",
         "performance": build_performance(x.get("Campaign Performance")),
