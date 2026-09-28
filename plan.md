@@ -90,4 +90,4 @@ show Google's own previews for PMax / Demand Gen if possible.
 - [x] Live Assets script extended (2026-09-28): image extensions, prices, promotions, calls, apps. Served image
       extensions shown for RSAs now (29 ads). Snippets only appear in 1 served combo → need the Live Assets tab.
 - [x] **D (interim).** Optional `Preview Links` tab (Campaign | Ad group | Ad ID | Format | URL | Created) →
-      "Google's preview" button per ad, flagged when older than 14 days. Links open on Google (not embeddable).
+      "Google's preview" button per ad, flagged when older than 30 days (links are created with the 30-day option). Links open on Google (not embeddable).

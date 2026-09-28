@@ -343,7 +343,7 @@ def account_logos(ads, live):
 
 
 # ------------------------------------------------------------ preview links
-PREVIEW_DAYS = 14  # Google's shared preview links stop working after about two weeks
+PREVIEW_DAYS = 30  # the team creates shared preview links with the 30-day expiry option
 
 
 def build_preview_links(tab):
