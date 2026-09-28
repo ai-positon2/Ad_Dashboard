@@ -235,6 +235,8 @@ def read_live(tab, assets):
         text, img, vid = clean(r["Text"]), clean(r["Image URL"]), clean(r["Video ID"])
         lines = [l for l in clean(r["Lines"]).split(" | ") if l]
         if level in ("ACCOUNT", "CAMPAIGN", "AD_GROUP"):
+            if field in ("LOGO", "LANDSCAPE_LOGO"):  # PMax brand assets live at campaign level as LOGO
+                field = "BUSINESS_LOGO"
             if field in EXT_TYPES:
                 key = (acct, level, camp if level != "ACCOUNT" else "", group if level == "AD_GROUP" else "")
                 item = ({"x": text, "l": lines} if field in LINE_TYPES
