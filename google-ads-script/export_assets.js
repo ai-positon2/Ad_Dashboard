@@ -18,6 +18,7 @@ var SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1lMWQI2RECyNgFqwHZ
 var ACCOUNT_IDS = [];   // MCC only: leave empty for all client accounts, or limit e.g. ['123-456-7890']
 var TAB = 'Live Assets';
 var ASSET_BATCH = 400;
+var TIME_RESERVE_SEC = 180;   // stop starting new sections with less than this left, so results still get written
 
 var HEADER = ['Account', 'Customer ID', 'Level', 'Campaign', 'Channel', 'Ad group / asset group', 'Owner ID',
   'Field', 'Asset type', 'Text', 'Lines', 'Image URL', 'Video ID', 'Pinned', 'Final URL', 'Path 1', 'Path 2',
@@ -251,6 +252,22 @@ function writeAll(results) {
   Logger.log('Wrote ' + rows.length + ' live asset rows.');
 }
 
+/**
+ * Runs one section. Logs failures and slow sections (>5s), and skips the section entirely when the
+ * account is close to Google's 30-minute limit, so whatever was collected still gets written.
+ */
 function guarded(ctx, label, fn) {
+  var left = remainingSeconds();
+  if (left !== null && left < TIME_RESERVE_SEC) {
+    Logger.log('[' + ctx.name + '] skipped "' + label + '" — only ' + Math.round(left) + 's left before the time limit');
+    return;
+  }
+  var t0 = Date.now();
   try { fn(); } catch (e) { Logger.log('[' + ctx.name + '] ' + label + ' query failed (continuing): ' + e); }
+  var secs = (Date.now() - t0) / 1000;
+  if (secs > 5) Logger.log('[' + ctx.name + '] ' + label + ' took ' + Math.round(secs) + 's');
+}
+
+function remainingSeconds() {
+  try { return AdsApp.getExecutionInfo().getRemainingTime(); } catch (e) { return null; }
 }
