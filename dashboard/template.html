@@ -56,15 +56,6 @@ button{cursor:pointer}
 .top h1 span{color:var(--accent)}
 .fresh{color:var(--muted);font-size:12.5px;display:flex;flex-wrap:wrap;gap:4px 16px}
 .fresh b{color:var(--ink);font-weight:600}
-/* overview */
-.ov{display:grid;grid-template-columns:minmax(200px,.75fr) repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.ov>section{padding:18px 20px;min-width:0;background:var(--surface)}
-@media (max-width:1180px){.ov{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (max-width:640px){.ov{grid-template-columns:minmax(0,1fr)}}
-.hero .lbl{font-size:12.5px;color:var(--muted)}
-.hero .big{font:600 52px/1.05 var(--ui);letter-spacing:-.02em;margin:4px 0 14px}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px;color:var(--muted);align-items:baseline}
-.kv b{font:600 14px var(--mono);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
 .ctitle{font-size:13px;font-weight:600;margin:0 0 2px}
 .csub{font-size:12px;color:var(--muted);margin:0 0 12px}
 /* horizontal bar chart */
@@ -75,40 +66,10 @@ button{cursor:pointer}
 .hb .trk{height:14px;display:flex;align-items:center}
 .hb .trk i{display:block;height:14px;background:var(--accent);border-radius:0 4px 4px 0;min-width:2px}
 .hb .val{font:500 12px var(--mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
-/* stacked 100% bar */
-.stk{display:flex;gap:2px;height:22px;width:100%}
-.stk>span{display:flex;align-items:center;justify-content:center;font:600 11px var(--mono);color:#fff;min-width:3px;overflow:visible}
-.stk>span:first-child{border-radius:4px 0 0 4px}.stk>span:last-child{border-radius:0 4px 4px 0}
-.stk>span:only-child{border-radius:4px}
-.q-poor{background:var(--q-poor)}.q-average{background:var(--q-average)}.q-good{background:var(--q-good)}.q-excellent{background:var(--q-excellent)}.q-none{background:var(--faint)}
-.q-average{color:#241700!important}
-.srows{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 12px;align-items:center;font-size:12.5px}
-.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-top:12px}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
 /* tooltip */
 #tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--surface);font-size:12px;line-height:1.4;padding:7px 10px;border-radius:6px;max-width:320px;box-shadow:0 4px 14px rgb(0 0 0 / .25)}
 #tip b{font-family:var(--mono)}
 [data-tip]{cursor:default}
-/* combination share strip */
-.cstrip{display:flex;gap:2px;height:28px;margin-bottom:6px}
-.cstrip button{border:0;padding:0;background:var(--accent);opacity:.32;min-width:4px;cursor:pointer}
-.cstrip button:first-child{border-radius:4px 0 0 4px}.cstrip button:last-child{border-radius:0 4px 4px 0}
-.cstrip button:hover{opacity:.6}
-.cstrip button[aria-pressed="true"]{opacity:1}
-.cstrip .rest{background:var(--faint);opacity:.35;cursor:default}
-.caxis{display:flex;justify-content:space-between;font-size:11.5px;color:var(--faint);margin-bottom:16px}
-/* position heat cells */
-.heat{display:inline-grid;place-items:center;width:52px;height:26px;border-radius:4px;font:500 11.5px var(--mono);font-variant-numeric:tabular-nums}
-.tbl td.hc{padding:3px 3px;text-align:center}
-.tbl th.hc{text-align:center;padding-inline:3px}
-.meter{display:inline-flex;align-items:center;gap:6px}
-.meter .m{width:38px;height:4px;border-radius:2px;background:var(--sunk);overflow:hidden}
-.meter .m i{display:block;height:100%;background:var(--faint)}
-.scale{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--faint)}
-.scale .grad{width:120px;height:8px;border-radius:2px;background:linear-gradient(90deg,color-mix(in oklab,var(--accent) 6%,var(--surface)),var(--accent))}
-.ibar{grid-column:1/-1;height:3px;background:var(--sunk);border-radius:2px;overflow:hidden;margin-top:4px}
-.ibar i{display:block;height:100%;background:var(--accent);opacity:.75}
 
 /* toolbar */
 .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
@@ -176,18 +137,6 @@ h3{font:600 11.5px/1.2 var(--ui);letter-spacing:.08em;text-transform:uppercase;c
 .combo .bar{grid-column:2/4;height:4px;background:var(--sunk);border-radius:2px;overflow:hidden;display:block}
 .combo .bar i{display:block;height:100%;background:var(--accent);border-radius:2px}
 
-/* asset tables */
-.acols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:22px}
-.tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);text-align:left;padding:0 8px 6px;border-bottom:1px solid var(--line)}
-.tbl th.num,.tbl td.num{text-align:right;white-space:nowrap}
-.tbl td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
-.tbl tr.off td:first-child{color:var(--faint)}
-.share{display:flex;align-items:center;gap:8px;justify-content:flex-end}
-.share .b{width:56px;height:5px;background:var(--sunk);border-radius:3px;overflow:hidden}
-.share .b i{display:block;height:100%;background:var(--accent)}
-.cc{color:var(--faint)}.cc.hi{color:var(--s-average)}
-.sect{margin-top:22px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:12.5px;padding:3px 10px;border-radius:99px;background:var(--sunk)}
 .gallery{display:flex;flex-wrap:wrap;gap:12px}
@@ -280,6 +229,21 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 @media (prefers-reduced-motion:no-preference){.pulse{animation:pulse 1s ease-in-out infinite alternate}}
 @keyframes pulse{from{opacity:.25}to{opacity:1}}
 .warnbox{font-size:13px;padding:9px 12px;border-radius:8px;background:var(--s-average-bg);color:var(--s-average)}
+/* live asset lists */
+.phead .src{font-size:12px;color:var(--faint)}
+.agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:22px 28px}
+.agrid.media{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.aset.wide{grid-column:1/-1}
+.aset h3 .n{font-family:var(--mono);color:var(--faint);letter-spacing:0;margin-left:4px}
+.alist,.slist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.alist li{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.alist .at{flex:1;min-width:0}
+.alist .cc{font:500 11.5px var(--mono);color:var(--faint);white-space:nowrap}
+.alist .cc.hi{color:var(--s-average)}
+.pin{font-size:11px;font-weight:600;color:var(--k-rsa);background:var(--k-rsa-bg);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.slist li{display:flex;flex-direction:column;padding:7px 0;border-bottom:1px solid var(--line)}
+.slist .st{font-size:13.5px;font-weight:600}
+.slist .sd{font-size:12.5px;color:var(--muted)}
 </style>
 
 <div class="wrap">
@@ -290,7 +254,6 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
     </div>
     <button type="button" class="sumbtn" id="sumBtn"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 13.5h12M4 11V7M8 11V3M12 11V5.5"/></svg>Account summary</button>
   </header>
-  <div class="ov" id="overview" aria-label="Overview"></div>
   <nav class="bar" aria-label="Filters">
     <div class="seg" id="f-account" role="group" aria-label="Account"></div>
     <div class="seg" id="f-kind" role="group" aria-label="Ad type"></div>
@@ -332,19 +295,39 @@ const prettyCta=c=>c?c.toLowerCase().replace(/_/g," ").replace(/^./,m=>m.toUpper
 function hostOf(u){try{return new URL(u).hostname}catch(e){return DATA.domain}}
 function displayUrl(ad){const h=hostOf(ad.finalUrl).replace(/^(?!www\.)/,"www.");return "https://"+h+[ad.path1,ad.path2].filter(Boolean).map(p=>" › "+p).join("")}
 
-/* Simulated combos for ads Google doesn't report on (Demand Gen, RSAs with no impressions). */
+/* Previews for ads Google doesn't report combinations for (Demand Gen, RSAs with no impressions),
+   assembled only from the ad's own assets: pinned assets stay in their slot, extensions/images are the real ones. */
+function pinnedFirst(list,pins,prefix,slots,i){
+  const out=[],used=new Set();
+  for(let s=1;s<=slots;s++){
+    const pinned=list.filter(t=>pins[t]===prefix+s);
+    const pool=pinned.length?pinned:list.filter(t=>!pins[t]&&!used.has(t));
+    if(!pool.length)continue;
+    const pick=pool[(i+s-1)%pool.length];
+    if(!used.has(pick)){used.add(pick);out.push(pick)}
+  }
+  return out;
+}
 function simCombos(ad){
-  const H=ad.headlines||[],D=ad.descriptions||[],out=[];
+  const H=ad.headlines||[],D=ad.descriptions||[],L=ad.longHeadlines||[],out=[];
   if(!H.length)return out;
+  const x=ad.ext||{},pins=ad.pins||{},imgs=ad.images||[],vids=ad.videoThumbs||[];
   for(let i=0;i<Math.min(8,H.length);i++){
     const parts=[];
-    const hs=ad.kind==="DG"?[H[i]]:[H[i],H[(i+1)%H.length],H[(i+2)%H.length]];
-    hs.forEach((h,j)=>parts.push({f:"HEADLINE_"+(j+1),t:"TEXT",x:h}));
-    if(D.length){
-      parts.push({f:"DESCRIPTION_1",t:"TEXT",x:D[i%D.length]});
-      if(ad.kind!=="DG"&&D.length>1)parts.push({f:"DESCRIPTION_2",t:"TEXT",x:D[(i+1)%D.length]});
+    if(ad.kind==="DG"){
+      parts.push({f:"HEADLINE_1",t:"TEXT",x:H[i]});
+      if(L.length)parts.push({f:"LONG_HEADLINE",t:"TEXT",x:L[i%L.length]});
+      if(D.length)parts.push({f:"DESCRIPTION_1",t:"TEXT",x:D[i%D.length]});
+      if(imgs.length){const im=imgs[i%imgs.length];parts.push({f:im.f,t:"IMAGE",img:im.img})}
+      if(vids.length){const v=vids[i%vids.length];parts.push({f:"YOU_TUBE_VIDEO",t:"YOUTUBE_VIDEO",vid:v.vid,img:v.img})}
+      if(ad.cta)parts.push({f:"CALL_TO_ACTION",t:"TEXT",x:ad.cta});
+    }else{
+      pinnedFirst(H,pins,"H",3,i).forEach((h,j)=>parts.push({f:"HEADLINE_"+(j+1),t:"TEXT",x:h}));
+      pinnedFirst(D,pins,"D",2,i).forEach((d,j)=>parts.push({f:"DESCRIPTION_"+(j+1),t:"TEXT",x:d}));
+      (x.sitelinks||[]).slice(0,4).forEach(s=>parts.push({f:"SITELINK",t:"SITELINK",x:s.x,l:s.l}));
+      (x.callouts||[]).slice(0,4).forEach(c=>parts.push({f:"CALLOUT",t:"CALLOUT",x:c}));
+      if((x.snippets||[])[0])parts.push({f:"STRUCTURED_SNIPPET",t:"STRUCTURED_SNIPPET",x:x.snippets[0]});
     }
-    if(ad.business)parts.push({f:"BUSINESS_NAME",t:"TEXT",x:ad.business});
     out.push({rank:i+1,sim:true,parts});
   }
   return out;
@@ -352,14 +335,15 @@ function simCombos(ad){
 function allCombos(ad){if(!ad._c)ad._c=ad.combos.length?ad.combos:simCombos(ad);return ad._c}
 function combosOf(ad){const c=allCombos(ad);return ad.kind==="PMAX"?c.filter(x=>x.cat===state.pcat):c}
 
-function usageKey(f){if(/^HEADLINE_AS_SITELINK/.test(f))return "SITELINK";if(isH(f))return "HEADLINE";if(isD(f))return "DESCRIPTION";return f.replace(/_\d$/,"")}
 
 /* ---------- Google preview renderers ---------- */
-function bizName(ad,P){const b=P.find(p=>(p.f==="BUSINESS_NAME"||p.f==="UNKNOWN")&&p.t==="TEXT"&&p.x);return b?b.x:(ad.business||DATA.client)}
-function fav(ad,P){
-  const logo=P.find(p=>(p.f==="BUSINESS_LOGO"||p.f==="LOGO")&&p.img);
-  return `<span class="fav">${logo?`<img src="${esc(logo.img)}" alt="">`:esc(bizName(ad,P)[0])}</span>`;
+function bizName(ad,P){const b=P.find(p=>(p.f==="BUSINESS_NAME"||p.f==="UNKNOWN")&&p.t==="TEXT"&&p.x);return b?b.x:((ad.ext&&ad.ext.business)||ad.business||DATA.client)}
+function logoFor(ad,P){
+  const l=(P||[]).find(p=>(p.f==="BUSINESS_LOGO"||p.f==="LOGO")&&p.img);
+  return (l&&l.img)||(ad.ext&&ad.ext.logo)||(ad.logos||[])[0]||(DATA.logos||{})[ad.account]||Object.values(DATA.logos||{})[0]||"";
 }
+const GLOBE=`<svg viewBox="0 0 24 24" width="60%" height="60%" fill="none" stroke="#5f6368" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9M12 3C9.5 5.6 8.2 8.6 8.2 12s1.3 6.4 3.8 9"/></svg>`;
+function fav(ad,P){const src=logoFor(ad,P);return `<span class="fav">${src?`<img src="${esc(src)}" alt="">`:GLOBE}</span>`}
 function ctaOf(ad,P){const c=P.find(p=>p.f==="CALL_TO_ACTION"&&p.x);return prettyCta(c?c.x:ad.cta)}
 function pickImg(P,prefer){for(const f of prefer){const p=P.find(p=>p.f===f&&p.img);if(p)return p}return P.find(p=>p.img&&!p.vid&&!/LOGO/.test(p.f))}
 function imgTag(p,cls,label){return p?`<img class="${cls}" src="${esc(p.img)}" alt="">`:`<div class="${cls} ph">${esc(label)}</div>`}
@@ -402,7 +386,7 @@ function displayCard(ad,combo){
 }
 function discoverCard(ad,combo){
   const P=combo.parts,im=pickImg(P,["MARKETING_IMAGE","AD_IMAGE","PORTRAIT_MARKETING_IMAGE","SQUARE_MARKETING_IMAGE"]);
-  return `<div class="g disc">${imgTag(im,"img",combo.sim?"Image assets aren't in the sheet":"No image in this combination")}<div class="card-in">
+  return `<div class="g disc">${imgTag(im,"img",combo.sim?"No image on this ad":"No image in this combination")}<div class="card-in">
     <div class="byline">${fav(ad,P)}<span><b>${esc(bizName(ad,P))}</b> · Sponsored</span></div>
     <div class="hd">${esc(textOf(P,/^LONG_HEADLINE/)||heads(P)[0]||"")}</div>
     <div class="dd">${esc(descs(P)[0]||"")}</div>
@@ -411,7 +395,7 @@ function discoverCard(ad,combo){
 }
 function youtubeCard(ad,combo){
   const P=combo.parts,v=P.find(p=>p.vid)||{};
-  const thumb=v.img?`<img class="img" src="${esc(v.img)}" alt="">`:`<div class="img ph">${combo.sim?"Video assets aren't in the sheet":"No video in this combination"}</div>`;
+  const thumb=v.img?`<img class="img" src="${esc(v.img)}" alt="">`:`<div class="img ph">${combo.sim?"No video on this ad":"No video in this combination"}</div>`;
   return `<div class="g yt">
     ${v.vid?`<a class="vbox" href="https://www.youtube.com/watch?v=${esc(v.vid)}" target="_blank" rel="noopener" title="Open this video on YouTube">${thumb}<span class="play"><span></span></span></a>`:`<div class="vbox">${thumb}</div>`}
     <div class="row">${fav(ad,P)}<div style="min-width:0">
@@ -453,7 +437,7 @@ function filtered(){
 function renderList(list){
   const el=$("#list");
   if(!list.length){el.innerHTML=`<div class="empty">No ads match these filters.</div>`;return}
-  const groups=new Map(),maxI=Math.max(1,...list.map(a=>a.impressions||0));
+  const groups=new Map();
   list.forEach(a=>{if(!groups.has(a.campaign))groups.set(a.campaign,[]);groups.get(a.campaign).push(a)});
   el.innerHTML=[...groups].map(([camp,items])=>{
     items.sort((a,b)=>(b.served-a.served)||((b.impressions||0)-(a.impressions||0)));
@@ -463,7 +447,7 @@ function renderList(list){
       return `<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
         <span class="t">${esc(a.title)}</span>
         <span class="s">${a.served?"":"Not served · "}${esc(sub)}</span>
-        <span class="r"><span class="kind ${a.kind}">${KIND[a.kind]}</span>${right}</span>${a.impressions?`<span class="ibar"><i style="width:${(a.impressions/maxI*100).toFixed(1)}%"></i></span>`:""}</button>`;
+        <span class="r"><span class="kind ${a.kind}">${KIND[a.kind]}</span>${right}</span></button>`;
     }).join("");
   }).join("");
 }
@@ -481,84 +465,57 @@ document.addEventListener("pointerleave",()=>{tip.hidden=true});
 const pct=(a,b)=>b?Math.round(a/b*100):0;
 
 /* ---------- detail ---------- */
-/* One ad's per-asset usage: total impressions, and impressions by position (RSA) or appearances by format (PMax). */
-function assetUsage(ad){
-  const m=new Map(),total=ad.combos.reduce((s,c)=>s+(c.imp||0),0);
-  ad.combos.forEach(c=>{
-    const seen=new Set();
-    c.parts.forEach(p=>{
-      if(!p.x)return;const type=usageKey(p.f),k=type+"|"+p.x;
-      const e=m.get(k)||{imp:0,n:0,pos:{},cat:{}};
-      const pos=(p.f.match(/_(\d)$/)||[])[1];
-      if(pos&&(type==="HEADLINE"||type==="DESCRIPTION"))e.pos[pos]=(e.pos[pos]||0)+(c.imp||0);
-      if(!seen.has(k)){seen.add(k);e.imp+=c.imp||0;e.n++;if(c.cat)e.cat[c.cat]=(e.cat[c.cat]||0)+1}
-      m.set(k,e);
-    });
-  });
-  const counts={};ad.combos.forEach(c=>{if(c.cat)counts[c.cat]=(counts[c.cat]||0)+1});
-  return{get:(type,val)=>m.get(type+"|"+val),total,combos:ad.combos.length,counts};
-}
-function heatCell(v,max,tipText,label){
-  if(!v)return `<td class="hc"><span class="heat" style="color:var(--faint)" data-tip="${esc(tipText)}">·</span></td>`;
-  const r=v/max,mix=Math.round(10+r*90);
-  return `<td class="hc"><span class="heat" style="background:color-mix(in oklab,var(--accent) ${mix}%,var(--surface));color:${r>.55?"var(--on-accent)":"var(--ink)"}" data-tip="${esc(tipText)}">${esc(label)}</span></td>`;
-}
-function charMeter(len,limit){
-  const r=Math.min(1,len/limit);
-  return `<span class="meter" data-tip="${len} of ${limit} characters"><span class="m"><i style="width:${(r*100).toFixed(0)}%"></i></span><span class="mono cc${len>limit?" hi":""}">${len}</span></span>`;
-}
-/* Asset table with a heat grid: RSA columns are ad positions, PMax columns are Google's formats. */
-function assetTable(title,items,limit,usage,type,cols){
-  if(!items||!items.length)return "";
-  cols=usage?(cols||[]):[];
-  const cells=[];
-  const rows=items.map(t=>{
-    const u=usage&&usage.get(type,t);
-    const vals=cols.map(c=>{const v=u?(usage.total?(u.pos[c.k]||0):(u.cat[c.k]||0)):0;cells.push(v);return v});
-    return{t,u,vals};
-  });
-  const max=Math.max(1,...cells);
-  const body=rows.map(({t,u,vals})=>{
-    const len=[...t].length;
-    const heat=cols.map((c,i)=>{
-      const v=vals[i];
-      if(usage.total)return heatCell(v,max,`"${t}" in ${c.l.toLowerCase()}: ${fmt(v)} impressions (${pct(v,usage.total)}% of the ad)`,pct(v,usage.total)+"%");
-      const n=usage.counts[c.k]||0;
-      return heatCell(v,max,`"${t}" appears in ${v} of Google's ${n} top ${c.l} combinations`,v+"/"+n);
-    }).join("");
-    let share="";
-    if(usage&&usage.total){const p=u?pct(u.imp,usage.total):0;share=`<td class="num"><div class="share" data-tip="${esc(`"${t}" served in ${p}% of this ad's impressions`)}"><span class="mono">${u?p+"%":"not served"}</span><span class="b"><i style="width:${p}%"></i></span></div></td>`}
-    return `<tr class="${usage&&!u?"off":""}"><td>${esc(t)}</td><td class="num">${charMeter(len,limit)}</td>${heat}${share}</tr>`;
-  }).join("");
-  const head=`<th>Asset</th><th class="num">Chars</th>${cols.map(c=>`<th class="hc">${esc(c.l)}</th>`).join("")}${usage&&usage.total?`<th class="num">Total</th>`:""}`;
-  return `<div><h3>${esc(title)} · ${items.length}</h3><div style="overflow-x:auto"><table class="tbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></div>`;
-}
 function servedTexts(ad,pred){const s=new Set();ad.combos.forEach(c=>c.parts.forEach(p=>{if(pred(p.f)&&p.x)s.add(p.x)}));return[...s]}
+function servedSitelinks(ad){const m=new Map();ad.combos.forEach(c=>c.parts.forEach(p=>{if((p.f==="SITELINK"||/^HEADLINE_AS_SITELINK/.test(p.f))&&p.x&&!m.has(p.x))m.set(p.x,{x:p.x,l:p.l||[]})}));return[...m.values()]}
 function seg(key,opts){return `<div class="seg" data-key="${key}" role="group">${opts.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${state[key]===v}">${l}</button>`).join("")}</div>`}
-/* 100% strip: each served combination's share of the ad's impressions. */
-function comboStrip(ad,combos){
-  if(!ad.impressions||!combos.some(c=>c.imp))return "";
-  const segs=combos.map((c,i)=>{
-    const w=c.imp/ad.impressions*100,h=heads(c.parts).join(" | ");
-    return `<button type="button" class="cs" data-i="${i}" aria-pressed="${i===state.combo}" aria-label="Combination ${c.rank}" style="flex:${w.toFixed(3)} 1 0" data-tip="${esc(`#${c.rank} · ${fmt(c.imp)} impressions (${pct(c.imp,ad.impressions)}%) — ${h}`)}"></button>`;
-  }).join("");
-  const top3=combos.slice(0,3).reduce((s,c)=>s+c.imp,0);
-  return `<p class="ctitle">How impressions split across the ${combos.length} served combinations</p>
-    <p class="csub">The top 3 took <b class="mono" style="color:var(--ink)">${pct(top3,ad.impressions)}%</b> of this ad's ${fmt(ad.impressions)} impressions. Click a segment to preview it.</p>
-    <div class="cstrip">${segs}</div><div class="caxis"><span>#1 most served</span><span>#${combos[combos.length-1].rank}</span></div>`;
+const PIN_LABEL={H1:"Pinned · headline 1",H2:"Pinned · headline 2",H3:"Pinned · headline 3",D1:"Pinned · description 1",D2:"Pinned · description 2"};
+function textList(title,items,limit,pins){
+  if(!items||!items.length)return "";
+  return `<section class="aset"><h3>${esc(title)} <span class="n">${items.length}</span></h3><ul class="alist">${items.map(t=>{
+    const len=[...t].length,pin=pins&&pins[t];
+    return `<li><span class="at">${esc(t)}</span>${pin?`<span class="pin">${esc(PIN_LABEL[pin]||"Pinned")}</span>`:""}${limit?`<span class="cc${len>limit?" hi":""}">${len}/${limit}</span>`:""}</li>`;
+  }).join("")}</ul></section>`;
+}
+function sitelinkList(items){
+  if(!items||!items.length)return "";
+  return `<section class="aset"><h3>Sitelinks <span class="n">${items.length}</span></h3><ul class="slist">${items.map(s=>`<li><span class="st">${esc(s.x)}</span>${(s.l||[]).map(l=>`<span class="sd">${esc(l)}</span>`).join("")}</li>`).join("")}</ul></section>`;
+}
+function chipList(title,items){
+  if(!items||!items.length)return "";
+  return `<section class="aset"><h3>${esc(title)} <span class="n">${items.length}</span></h3><div class="chips">${items.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></section>`;
+}
+function gallery(title,items,video){
+  if(!items||!items.length)return "";
+  return `<section class="aset wide"><h3>${esc(title)} <span class="n">${items.length}</span></h3><div class="gallery">${items.map(i=>video
+    ?`<figure><a href="https://www.youtube.com/watch?v=${esc(i.vid)}" target="_blank" rel="noopener" title="Watch on YouTube"><img src="${esc(i.img)}" alt="YouTube video ${esc(i.vid)}"></a><figcaption>Watch on YouTube ↗</figcaption></figure>`
+    :`<figure><img src="${esc(i.img)}" alt="">${i.f?`<figcaption>${esc(i.f.toLowerCase().replace(/_/g," "))}</figcaption>`:""}</figure>`).join("")}</div></section>`;
+}
+function assetsPanel(ad){
+  const x=ad.ext||{},served=ad.combos.length>0;
+  const sitelinks=(x.sitelinks&&x.sitelinks.length)?x.sitelinks:servedSitelinks(ad);
+  const callouts=(x.callouts&&x.callouts.length)?x.callouts:servedTexts(ad,f=>f==="CALLOUT");
+  const snippets=(x.snippets&&x.snippets.length)?x.snippets:servedTexts(ad,f=>f==="STRUCTURED_SNIPPET");
+  const logo=logoFor(ad,[]),logos=(ad.logos&&ad.logos.length)?ad.logos:(logo?[logo]:[]);
+  const brand=[bizName(ad,[])].filter(Boolean);
+  const text=`<div class="agrid">${textList("Headlines",ad.headlines,LIMIT.headline,ad.pins)}${textList("Long headlines",ad.longHeadlines,LIMIT.long)}${textList("Descriptions",ad.descriptions,LIMIT.description,ad.pins)}${sitelinkList(sitelinks)}${chipList("Callouts",callouts)}${chipList("Structured snippets",snippets)}${chipList("Business name",brand)}${ad.cta?chipList("Call to action",[prettyCta(ad.cta)]):""}</div>`;
+  const media=gallery("Images",ad.images)+gallery("Logos",logos.map(l=>({img:l})))+gallery("Videos",ad.videoThumbs,true)+(ad.themes&&ad.themes.length?chipList("Search themes",ad.themes):"");
+  const src=ad.live?`Live in Google Ads as of ${esc(DATA.liveExportedAt)}`
+    :served?"Assets from the ad-copy sheet plus what Google served"
+    :"Assets from the ad-copy sheet";
+  return `<div class="phead"><h3>${ad.live?"Live assets":"Assets"}</h3><span class="src">${src}</span></div>${text}${media?`<div class="agrid media">${media}</div>`:""}`;
 }
 
 function renderDetail(){
   const el=$("#detail"),ad=ads.find(a=>a.id===state.sel);
   if(!ad){el.innerHTML=`<div class="panel empty">Pick an ad on the left to see its previews.</div>`;return}
   const combos=combosOf(ad);if(state.combo>=combos.length)state.combo=0;
-  const combo=combos[state.combo],real=ad.combos.length>0,usage=real?assetUsage(ad):null;
+  const combo=combos[state.combo],real=ad.combos.length>0;
   const range=DATA.dateRange.toLowerCase();
   const note=real
     ?(ad.kind==="PMAX"?`Real top combinations reported by Google for this asset group (${esc(range)}). Google ranks them but doesn't report impressions per combination.`
       :`Real combinations Google served in the ${esc(range)}, ranked by impressions.`)
-    :ad.kind==="DG"?`Simulated. Google doesn't report served combinations for Demand Gen, so these rotate the ad's own headlines and descriptions. Image and video assets aren't in the sheet.`
-    :`No impressions in the ${esc(range)}, so these previews are simulated from the ad's assets in the sheet.`;
+    :ad.kind==="DG"?`Google doesn't report which combinations it serves for Demand Gen, so these previews rotate this ad's ${ad.live?"live assets":"headlines and descriptions from the sheet"}.${ad.live?"":" Its images and videos appear once the Live Assets script has run."}`
+    :`No impressions in the ${esc(range)}, so these previews are assembled from the ad's ${ad.live?"live assets":"assets in the ad-copy sheet"}.`;
 
   let ctrls="";
   if(ad.kind==="PMAX")ctrls+=seg("pcat",[["TEXT","Search"],["IMAGE","Display & Discover"],["VIDEO","YouTube"]]);
@@ -574,24 +531,6 @@ function renderDetail(){
   }).join("")||`<div class="empty">None in this format.</div>`;
   const share=combo&&combo.imp!=null&&ad.impressions?` · <b class="mono">${pct(combo.imp,ad.impressions)}%</b> of this ad's impressions`:"";
 
-  const POS3=[{k:"1",l:"Pos 1"},{k:"2",l:"Pos 2"},{k:"3",l:"Pos 3"}],POS2=POS3.slice(0,2);
-  const CATS=[{k:"TEXT",l:"Search"},{k:"IMAGE",l:"Display"},{k:"VIDEO",l:"YouTube"}];
-  let assets;
-  if(ad.kind==="PMAX"){
-    assets=`<div class="acols">${assetTable("Headlines",ad.headlines,LIMIT.headline,usage,"HEADLINE",CATS)}${assetTable("Long headlines",ad.longHeadlines,LIMIT.long,usage,"LONG_HEADLINE",CATS)}${assetTable("Descriptions",ad.descriptions,LIMIT.description,usage,"DESCRIPTION",CATS)}</div>`;
-    if(ad.images&&ad.images.length)assets+=`<div class="sect"><h3>Images served · ${ad.images.length}</h3><div class="gallery">${ad.images.map(i=>`<figure><img src="${esc(i.img)}" alt=""><figcaption>${esc(i.f.toLowerCase().replace(/_/g," "))}</figcaption></figure>`).join("")}</div></div>`;
-    if(ad.videoThumbs&&ad.videoThumbs.length)assets+=`<div class="sect"><h3>Videos · ${ad.videoThumbs.length}</h3><div class="gallery">${ad.videoThumbs.map(v=>`<figure><a href="https://www.youtube.com/watch?v=${esc(v.vid)}" target="_blank" rel="noopener" title="Open on YouTube"><img src="${esc(v.img)}" alt="YouTube video ${esc(v.vid)}"></a><figcaption class="mono">${esc(v.vid)}</figcaption></figure>`).join("")}</div></div>`;
-    if(ad.themes&&ad.themes.length)assets+=`<div class="sect"><h3>Search themes · ${ad.themes.length}</h3><div class="chips">${ad.themes.map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div>`;
-  }else{
-    assets=`<div class="acols">${assetTable("Headlines",ad.headlines,LIMIT.headline,usage,"HEADLINE",POS3)}${assetTable("Descriptions",ad.descriptions,LIMIT.description,usage,"DESCRIPTION",POS2)}</div>`;
-    if(real){
-      const sl=servedTexts(ad,f=>f==="SITELINK"||/^HEADLINE_AS_SITELINK/.test(f)),co=servedTexts(ad,f=>f==="CALLOUT");
-      if(sl.length||co.length)assets+=`<div class="acols sect">${assetTable("Sitelinks served",sl,LIMIT.sitelink,usage,"SITELINK")}${assetTable("Callouts served",co,LIMIT.callout,usage,"CALLOUT")}</div>`;
-    }
-  }
-  const scale=usage?`<div class="scale"><span>Less</span><span class="grad"></span><span>More</span></div>`:"";
-  const assetHead=usage?(usage.total?"Where each asset served · share of impressions by position":"Where each asset served · appearances in Google's top combinations by format"):"Assets";
-
   el.innerHTML=`
   <div class="panel">
     <div class="crumb"><span>${esc(ad.account)}</span><span>${esc(ad.campaign)}</span>${ad.adGroup?`<span>${esc(ad.adGroup)}</span>`:""}</div>
@@ -606,7 +545,6 @@ function renderDetail(){
     <div class="note${real?" real":""}">${note}</div>
   </div>
   <div class="panel">
-    ${ad.kind==="RSA"?comboStrip(ad,combos):""}
     <div class="phead"><h3>Preview</h3><div class="bar">${ctrls}</div></div>
     <div class="pgrid">
       <div><div class="stage">${renderPreview(ad,combo)}</div>
@@ -615,12 +553,12 @@ function renderDetail(){
       <div><h3>${real?"Ranked combinations":"Simulated combinations"}</h3><div class="combos">${clist}</div></div>
     </div>
   </div>
-  <div class="panel"><div class="phead"><h3>${assetHead}</h3>${scale}</div>${assets}</div>`;
+  <div class="panel">${assetsPanel(ad)}</div>`;
 }
 $("#detail").addEventListener("click",e=>{
   const s=e.target.closest(".seg[data-key] button");
   if(s){const k=s.parentElement.dataset.key;state[k]=s.dataset.v;if(k==="pcat")state.combo=0;if(k==="device")store.set("device",state.device);renderDetail();return}
-  const c=e.target.closest(".combo,.cs");if(c){state.combo=+c.dataset.i;renderDetail();return}
+  const c=e.target.closest(".combo");if(c){state.combo=+c.dataset.i;renderDetail();return}
   const st=e.target.closest("[data-step]");
   if(st){const ad=ads.find(a=>a.id===state.sel),n=combosOf(ad).length;if(n){state.combo=(state.combo+Number(st.dataset.step)+n)%n;renderDetail()}}
 });
@@ -629,50 +567,10 @@ document.addEventListener("keydown",e=>{
   if(e.key==="ArrowRight"||e.key==="ArrowLeft"){const b=document.querySelector(`[data-step="${e.key==="ArrowRight"?1:-1}"]`);if(b)b.click()}
 });
 
-/* ---------- overview charts (follow the account / type / campaign filters) ---------- */
-const STRENGTHS=["Poor","Average","Good","Excellent"];
+/* ---------- horizontal bars (used by the account summary) ---------- */
 function hbars(rows,max,btn){
   return `<div class="hb">${rows.map(r=>`${btn?`<button type="button" class="lab btn" data-camp="${esc(r.key)}" title="Filter to ${esc(r.label)}">${esc(r.label)}</button>`:`<span class="lab" title="${esc(r.label)}">${esc(r.label)}</span>`}<span class="trk" data-tip="${esc(r.tip)}"><i style="width:${(r.v/max*100).toFixed(1)}%"></i></span><span class="val">${fmt(r.v)}</span>`).join("")}</div>`;
 }
-function renderOverview(){
-  const pool=ads.filter(a=>(state.account==="All"||a.account===state.account)&&(state.kind==="All"||a.kind===state.kind)&&(state.campaign==="All"||a.campaign===state.campaign));
-  const rsa=pool.filter(a=>a.kind==="RSA"),served=rsa.filter(a=>a.served);
-  const imp=served.reduce((s,a)=>s+a.impressions,0);
-  const combos=pool.reduce((s,a)=>s+a.combos.length,0);
-  const scope=[state.account!=="All"?state.account:"",state.campaign!=="All"?state.campaign:""].filter(Boolean).join(" · ")||"All accounts";
-
-  const hero=`<section class="hero"><div class="lbl">Search impressions · ${esc(DATA.dateRange.toLowerCase())}</div><div class="big">${fmt(imp)}</div>
-    <div class="kv"><span>Search ads served</span><b>${fmt(served.length)}</b><span>Search ads not served</span><b>${fmt(rsa.length-served.length)}</b>
-    <span>Real combinations</span><b>${fmt(combos)}</b><span>PMax asset groups</span><b>${fmt(pool.filter(a=>a.kind==="PMAX").length)}</b>
-    <span>Demand Gen ads · simulated</span><b>${fmt(pool.filter(a=>a.kind==="DG").length)}</b></div></section>`;
-
-  const byCamp=new Map();served.forEach(a=>{const e=byCamp.get(a.campaign)||{key:a.campaign,label:a.campaign,v:0,n:0,acct:a.account};e.v+=a.impressions;e.n++;byCamp.set(a.campaign,e)});
-  const camps=[...byCamp.values()].sort((a,b)=>b.v-a.v).slice(0,8);
-  camps.forEach(c=>c.tip=`${c.label} (${c.acct}): ${fmt(c.v)} impressions across ${c.n} ads · ${pct(c.v,imp)}% of the total`);
-  const campChart=`<section><p class="ctitle">Impressions by campaign</p><p class="csub">${esc(scope)} · served Search ads. Click a name to filter.</p>
-    ${camps.length?hbars(camps,Math.max(...camps.map(c=>c.v)),true):`<p class="csub">No Search impressions in this selection.</p>`}</section>`;
-
-  const byHead=new Map();
-  served.forEach(a=>a.combos.forEach(c=>{const seen=new Set();heads(c.parts).forEach(h=>{if(seen.has(h))return;seen.add(h);byHead.set(h,(byHead.get(h)||0)+c.imp)})}));
-  const topH=[...byHead].sort((a,b)=>b[1]-a[1]).slice(0,8).map(([h,v])=>({label:h,v,tip:`"${h}" was in combinations that took ${fmt(v)} impressions (${pct(v,imp)}% of the total)`}));
-  const headChart=`<section><p class="ctitle">Headlines doing the heavy lifting</p><p class="csub">Impressions of the combinations each headline appeared in.</p>
-    ${topH.length?hbars(topH,Math.max(...topH.map(h=>h.v)),false):`<p class="csub">No served headlines in this selection.</p>`}</section>`;
-
-  const accts=[...new Set(pool.map(a=>a.account))].sort();
-  const rows=accts.map(acc=>{
-    const list=pool.filter(a=>a.account===acc&&a.strength),n=list.length;if(!n)return "";
-    const segs=STRENGTHS.map(s=>{const c=list.filter(a=>a.strength===s).length;if(!c)return "";const w=c/n*100;
-      return `<span class="q-${s.toLowerCase()}" style="flex:${w.toFixed(2)} 1 0" data-tip="${esc(`${acc}: ${c} of ${n} ads rated ${s} (${Math.round(w)}%)`)}">${w>=12?c:""}</span>`}).join("");
-    return `<span>${esc(acc)}</span><div class="stk" role="img" aria-label="${esc(acc)} ad strength: ${STRENGTHS.map(s=>s+" "+list.filter(a=>a.strength===s).length).join(", ")}">${segs}</div>`;
-  }).join("");
-  const legend=`<div class="legend">${STRENGTHS.map(s=>`<span><i class="q-${s.toLowerCase()}"></i>${s}</span>`).join("")}</div>`;
-  const strChart=`<section><p class="ctitle">Ad strength by account</p><p class="csub">Number of ads at each rating, from the Supermetrics sheet.</p>
-    ${rows?`<div class="srows">${rows}</div>${legend}`:`<p class="csub">No ad strength data in this selection.</p>`}</section>`;
-
-  $("#overview").innerHTML=hero+campChart+headChart+strChart;
-}
-$("#overview").addEventListener("click",e=>{const b=e.target.closest("[data-camp]");if(b){state.campaign=b.dataset.camp;render()}});
-
 /* ---------- header + render ---------- */
 function renderHeader(){
   $("#client").textContent=DATA.client;
@@ -689,7 +587,7 @@ function render(){
   $("#f-campaign").innerHTML=`<option value="All">All campaigns (${camps.length})</option>`+camps.map(c=>`<option value="${esc(c)}"${c===state.campaign?" selected":""}>${esc(c)}</option>`).join("");
   const list=filtered();
   if(!list.some(a=>a.id===state.sel))state.sel=((list.find(a=>a.served)||list[0])||{}).id||null;
-  renderOverview();renderList(list);renderDetail();
+  renderList(list);renderDetail();
 }
 $("#f-campaign").onchange=e=>{state.campaign=e.target.value;render()};
 $("#f-q").oninput=e=>{state.q=e.target.value;render()};

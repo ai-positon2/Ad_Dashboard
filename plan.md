@@ -70,3 +70,20 @@ B. **Real** — Google's own top combinations (Assets → Combinations report;
   start command `python main.py` and healthcheck `/healthz`.
 - `main.py` builds on boot, serves `dist/`, rebuilds every `REBUILD_HOURS` (default 3) — this is the daily refresh.
 - Optional `DASH_PASSWORD` env var puts the site behind a password (any username). The Railway URL is public otherwise.
+
+## Client feedback round 1 (2026-09-28)
+Feedback: drop the data-heavy overview (keep Account summary); show live headlines, descriptions,
+sitelinks/other assets, then images & videos; logo must be the account's real logo, not a made-up "T";
+show Google's own previews for PMax / Demand Gen if possible.
+
+- [x] **A. Simplify the page.** Remove the overview charts, impression-split strip and position heat grids;
+      asset panel becomes plain lists: headlines, descriptions, sitelinks, callouts, snippets, then images, logos, videos.
+- [x] **B. Real logos.** Per-account business logo (from Google's served assets); never a letter placeholder.
+- [~] **C. Live assets feed.** Script + build.py support done and tested on a synthetic tab; waiting for user to install/run. New standalone script `google-ads-script/export_assets.js` → `Live Assets` tab:
+      enabled RSA assets (with pins), Demand Gen ad assets (real images/logos), PMax asset-group assets,
+      sitelinks/callouts/snippets/logo/business name at account, campaign and ad-group level.
+      build.py uses it when present, falls back to today's sources otherwise.
+- [ ] **D. Google's own previews.** API finding: `ShareablePreviewService` gives real preview links for PMax
+      asset groups only (not Demand Gen, not RSA), links can't be embedded (X-Frame-Options: deny), and it is
+      not callable from Google Ads Scripts — needs full Google Ads API access (developer token + OAuth).
+      Decision needed from user.

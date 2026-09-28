@@ -215,6 +215,125 @@ def build_demand_gen(sheet):
     return out
 
 
+# --------------------------------------------------------------- live assets
+EXT_TYPES = ("SITELINK", "CALLOUT", "STRUCTURED_SNIPPET", "BUSINESS_LOGO", "BUSINESS_NAME")
+IMAGE_FIELDS = ("MARKETING_IMAGE", "SQUARE_MARKETING_IMAGE", "PORTRAIT_MARKETING_IMAGE")
+LOGO_FIELDS = ("LOGO", "LANDSCAPE_LOGO", "BUSINESS_LOGO")
+
+
+def read_live(tab, assets):
+    """Group the 'Live Assets' tab (export_assets.js) by owner: RSA ads, Demand Gen ads, asset groups, extensions."""
+    live = {"rsa": {}, "dg": {}, "pmax": {}, "ext": defaultdict(lambda: defaultdict(list))}
+    if tab is None or tab.dropna(how="all").empty:
+        return None
+    for _, r in tab.iterrows():
+        level, field, owner = clean(r["Level"]), clean(r["Field"]), clean(r["Owner ID"])
+        acct, camp, group = short_account(clean(r["Account"])), clean(r["Campaign"]), clean(r["Ad group / asset group"])
+        text, img, vid = clean(r["Text"]), clean(r["Image URL"]), clean(r["Video ID"])
+        lines = [l for l in clean(r["Lines"]).split(" | ") if l]
+        if level in ("ACCOUNT", "CAMPAIGN", "AD_GROUP"):
+            if field in EXT_TYPES:
+                key = (acct, level, camp if level != "ACCOUNT" else "", group if level == "AD_GROUP" else "")
+                item = {"x": text, "l": lines} if field == "SITELINK" else (assets.get(img) if field == "BUSINESS_LOGO" else text)
+                if item and item not in live["ext"][key][field]:
+                    live["ext"][key][field].append(item)
+            continue
+        kind = "pmax" if level == "ASSET_GROUP" else ("rsa" if clean(r["Channel"]) == "SEARCH" else "dg")
+        o = live[kind].setdefault(owner, {"account": acct, "campaign": camp, "group": group, "finalUrl": clean(r["Final URL"]),
+                                          "path1": clean(r["Path 1"]), "path2": clean(r["Path 2"]), "headlines": [],
+                                          "longHeadlines": [], "descriptions": [], "pins": {}, "images": [], "logos": [],
+                                          "videos": [], "business": "", "cta": ""})
+        if field == "HEADLINE" and text:
+            o["headlines"].append(text)
+        elif field == "LONG_HEADLINE" and text:
+            o["longHeadlines"].append(text)
+        elif field == "DESCRIPTION" and text:
+            o["descriptions"].append(text)
+        elif field in IMAGE_FIELDS and img:
+            o["images"].append({"img": assets.get(img), "f": field})
+        elif field in LOGO_FIELDS and img:
+            o["logos"].append(assets.get(img))
+        elif field == "YOUTUBE_VIDEO" and vid:
+            o["videos"].append(vid)
+        elif field == "BUSINESS_NAME" and text:
+            o["business"] = text
+        elif field.startswith("CALL_TO_ACTION") and text:
+            o["cta"] = text
+        pin = clean(r["Pinned"])
+        if pin and pin != "UNSPECIFIED" and text:
+            o["pins"][text] = pin.replace("HEADLINE_", "H").replace("DESCRIPTION_", "D")
+    return live
+
+
+def ext_for(live, account, campaign, group):
+    """Extensions that apply to an ad: Google uses the most specific level that has that asset type."""
+    out = {}
+    for t in EXT_TYPES:
+        for key in ((account, "AD_GROUP", campaign, group), (account, "CAMPAIGN", campaign, ""), (account, "ACCOUNT", "", "")):
+            vals = live["ext"].get(key, {}).get(t)
+            if vals:
+                out[t] = vals
+                break
+    return {"sitelinks": out.get("SITELINK", []), "callouts": out.get("CALLOUT", []),
+            "snippets": out.get("STRUCTURED_SNIPPET", []), "logo": (out.get("BUSINESS_LOGO") or [""])[0],
+            "business": (out.get("BUSINESS_NAME") or [""])[0]}
+
+
+def apply_live(ads, live, sheet, assets):
+    """Swap sheet/served asset lists for what is live in Google Ads right now."""
+    by_id = {a["id"]: a for a in ads}
+    out = [a for a in ads if not a["id"].startswith(("sheet-", "dg-"))]  # sheet-only rows are replaced by live ones
+    for ad_id, o in live["rsa"].items():
+        ad = by_id.get(ad_id)
+        if ad is None:  # live, but no impressions in the combination window
+            ad = {"id": ad_id, "kind": "RSA", "account": o["account"], "campaign": o["campaign"], "adGroup": o["group"],
+                  "served": False, "impressions": 0, "combos": [], "strength": ""}
+            out.append(ad)
+        ad.update({"headlines": o["headlines"], "descriptions": o["descriptions"], "pins": o["pins"], "live": True,
+                   "finalUrl": o["finalUrl"] or ad.get("finalUrl", ""), "path1": o["path1"], "path2": o["path2"]})
+        ad["ext"] = ext_for(live, o["account"], o["campaign"], o["group"])
+    for gid, o in live["pmax"].items():
+        g = by_id.get(gid)
+        if g is None:
+            g = {"id": gid, "kind": "PMAX", "account": o["account"], "campaign": o["campaign"], "adGroup": o["group"],
+                 "served": False, "impressions": None, "combos": [], "strength": ""}
+            out.append(g)
+        g.update({"headlines": o["headlines"], "longHeadlines": o["longHeadlines"], "descriptions": o["descriptions"],
+                  "images": o["images"], "logos": o["logos"], "business": o["business"], "cta": o["cta"] or g.get("cta", ""),
+                  "videoThumbs": [{"vid": v, "img": assets.video_thumb(v)} for v in o["videos"]], "live": True,
+                  "finalUrl": o["finalUrl"] or g.get("finalUrl", "")})
+        g["ext"] = ext_for(live, o["account"], o["campaign"], "")
+    strengths = {}
+    for _, r in sheet[sheet["Business name"].notna()].iterrows():  # Demand Gen ad strength only lives in the sheet
+        strengths.setdefault(clean(r["Campaign name"]), []).append(
+            ({clean(r.get(f"Headline {n} (Multi asset)")) for n in range(1, 6)}, clean(r["Ad strength"])))
+    for ad_id, o in live["dg"].items():
+        best = max(strengths.get(o["campaign"], []), key=lambda s: len(s[0] & set(o["headlines"])), default=(set(), ""))
+        out.append({"id": ad_id, "kind": "DG", "account": o["account"], "campaign": o["campaign"], "adGroup": o["group"],
+                    "finalUrl": o["finalUrl"], "path1": "", "path2": "", "served": False, "impressions": None,
+                    "strength": best[1], "business": o["business"], "cta": o["cta"], "headlines": o["headlines"],
+                    "longHeadlines": o["longHeadlines"], "descriptions": o["descriptions"], "images": o["images"],
+                    "logos": o["logos"], "videoThumbs": [{"vid": v, "img": assets.video_thumb(v)} for v in o["videos"]],
+                    "combos": [], "live": True, "ext": ext_for(live, o["account"], o["campaign"], o["group"])})
+    return out
+
+
+def account_logos(ads, live):
+    """Each account's real business logo: live account asset, else the logo Google served most, else a PMax logo."""
+    seen = defaultdict(lambda: defaultdict(int))
+    for a in ads:
+        for c in a["combos"]:
+            for p in c["parts"]:
+                if p["f"] in ("BUSINESS_LOGO", "LOGO") and p.get("img"):
+                    seen[a["account"]][(p["f"] != "BUSINESS_LOGO", p["img"])] += 1  # prefer BUSINESS_LOGO, then count
+    logos = {acct: min(c, key=lambda k: (k[0], -c[k]))[1] for acct, c in seen.items()}
+    if live:
+        for (acct, level, _, _), types in live["ext"].items():
+            if level == "ACCOUNT" and types.get("BUSINESS_LOGO"):
+                logos[acct] = types["BUSINESS_LOGO"][0]
+    return logos
+
+
 # ----------------------------------------------------- campaign performance
 def build_performance(tab):
     """Spend/clicks/conversions per enabled campaign, from the Google Ads Script's tab."""
@@ -249,6 +368,10 @@ def main():
     ads = (build_rsa(rsa_sheet, x["RSA Combinations"], assets)
            + build_pmax(x["Pmax"], x["PMax Combinations"], assets)
            + build_demand_gen(rsa_sheet))
+    live = read_live(x.get("Live Assets"), assets)
+    if live:
+        ads = apply_live(ads, live, rsa_sheet, assets)
+    logos = account_logos(ads, live)
 
     rc = x["RSA Combinations"]
     payload = {
@@ -257,6 +380,9 @@ def main():
         "exportedAt": clean(rc["Exported at"].iloc[0]),
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "ads": ads,
+        "logos": logos,
+        "liveAssets": bool(live),
+        "liveExportedAt": clean(x["Live Assets"]["Exported at"].iloc[0]) if live else "",
         "performance": build_performance(x.get("Campaign Performance")),
         "perfExportedAt": clean(x["Campaign Performance"]["Exported at"].iloc[0])
         if "Campaign Performance" in x and not x["Campaign Performance"].empty else "",
