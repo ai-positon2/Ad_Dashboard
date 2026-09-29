@@ -4,7 +4,7 @@
 
 Env vars
     PORT            port to listen on (Railway sets this)
-    REBUILD_HOURS   hours between rebuilds from the sheet (default 3); /api/rebuild rebuilds now
+    REBUILD_HOURS   hours between rebuilds from the sheet (default 1); /api/rebuild rebuilds now
     DASH_PASSWORD   optional; when set, the site asks for a password (any username)
     OPENAI_API_KEY  enables the AI-written account summary (/api/summary). Never commit it.
     OPENAI_MODEL    optional, default gpt-4o-mini
@@ -24,7 +24,7 @@ from functools import partial
 import build
 
 PORT = int(os.environ.get("PORT", "8000"))
-REBUILD_HOURS = float(os.environ.get("REBUILD_HOURS", "3"))
+REBUILD_HOURS = float(os.environ.get("REBUILD_HOURS", "1"))
 PASSWORD = os.environ.get("DASH_PASSWORD", "")
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
