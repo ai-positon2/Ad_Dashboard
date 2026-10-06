@@ -6,11 +6,14 @@ image/video thumbnails (the published page can't load external images), and
 writes dist/index.html + dist/assets/*.
 
     python build.py            # Tealium (default)
+    python build.py oia        # any key in clients.json; on Railway set the CLIENT env var instead
 """
 import hashlib
 import io
 import json
+import os
 import re
+import sys
 import urllib.request
 from collections import defaultdict
 from datetime import datetime
@@ -19,12 +22,12 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).parent
-DIST = ROOT / "dist"
-CLIENT = {
-    "name": "Tealium",
-    "sheet_id": "1lMWQI2RECyNgFqwHZ6r2gs0WhA3EsOvj2uha9Qwu-70",
-    "domain": "tealium.com",
-}
+CLIENTS = json.loads((ROOT / "clients.json").read_text(encoding="utf-8"))
+CLIENT_KEY = (sys.argv[1] if __name__ == "__main__" and len(sys.argv) > 1 else os.environ.get("CLIENT", "tealium")).lower()
+if CLIENT_KEY not in CLIENTS:
+    raise SystemExit(f"Unknown client '{CLIENT_KEY}'. Known: {', '.join(CLIENTS)}")
+CLIENT = CLIENTS[CLIENT_KEY]
+DIST = ROOT / "dist" / CLIENT_KEY
 MATCH_MIN = 0.6  # headline-set overlap needed to tie a sheet RSA row to a served ad
 
 
@@ -45,7 +48,31 @@ def cols(row, prefix, n):
 
 
 def short_account(name):
-    return name.replace(f"{CLIENT['name']} - ENG - ", "").strip()
+    prefix = CLIENT.get("account_prefix", "")
+    return (name[len(prefix):] if prefix and name.startswith(prefix) else name).strip()
+
+
+def tab(x, *names):
+    """A sheet tab by any of its names, ignoring case and spaces ("URLs" == "URLS")."""
+    norm = {k.strip().lower(): v for k, v in x.items()}
+    return next((norm[n.lower()] for n in names if n.lower() in norm), None)
+
+
+# Supermetrics tabs are optional; without them the scripts' tabs supply everything except
+# ad strength and PMax search themes.
+RSA_SHEET_COLS = ["Account", "Campaign name", "Ad strength", "Business name", "Headline 1 (Multi asset)",
+                  "Responsive search ad headline 1", "Responsive search ad path 1", "Responsive search ad path 2"]
+PMAX_SHEET_COLS = ["Campaign", "Headline 1", "Search theme", "Ad strength"]
+
+
+def sheet_or_empty(df, columns):
+    if df is None:
+        return pd.DataFrame(columns=columns, dtype=str)
+    df = df.dropna(how="all")
+    for c in columns:
+        if c not in df:
+            df[c] = None
+    return df
 
 
 # --------------------------------------------------------------------- images
@@ -402,38 +429,39 @@ def main():
     print("Downloading sheet...")
     data, _ = fetch(url)
     x = pd.read_excel(io.BytesIO(data), sheet_name=None, dtype=str)
-    for tab in ("RSA Combinations", "PMax Combinations"):
-        if tab not in x or x[tab].dropna(how="all").empty:
-            raise SystemExit(f"'{tab}' tab missing or empty — has the Google Ads Script run?")
-
-    rsa_sheet = x["RSA and Demand Gen"].dropna(how="all")
+    rc, pc = tab(x, "RSA Combinations"), tab(x, "PMax Combinations")
+    for name, df in (("RSA Combinations", rc), ("PMax Combinations", pc)):
+        if df is None:
+            raise SystemExit(f"'{name}' tab missing — has the combinations Google Ads Script run for {CLIENT['name']}?")
+    live_tab, perf_tab = tab(x, "Live Assets"), tab(x, "Campaign Performance")
+    rsa_sheet = sheet_or_empty(tab(x, "RSA and Demand Gen"), RSA_SHEET_COLS)
     assets = Assets()
-    ads = (build_rsa(rsa_sheet, x["RSA Combinations"], assets)
-           + build_pmax(x["Pmax"], x["PMax Combinations"], assets)
+    ads = (build_rsa(rsa_sheet, rc.dropna(how="all"), assets)
+           + build_pmax(sheet_or_empty(tab(x, "Pmax"), PMAX_SHEET_COLS), pc.dropna(how="all"), assets)
            + build_demand_gen(rsa_sheet))
-    live = read_live(x.get("Live Assets"), assets)
+    live = read_live(live_tab, assets)
     if live:
         ads = apply_live(ads, live, rsa_sheet, assets)
     logos = account_logos(ads, live)
 
-    rc = x["RSA Combinations"]
+    first = lambda df, col: clean(df[col].dropna().iloc[0]) if df is not None and col in df and df[col].notna().any() else ""
     payload = {
         "client": CLIENT["name"], "domain": CLIENT["domain"],
-        "dateRange": clean(rc["Date range"].iloc[0]).replace("_", " ").title(),
-        "exportedAt": clean(rc["Exported at"].iloc[0]),
+        "dateRange": first(rc, "Date range").replace("_", " ").title(),
+        "exportedAt": first(rc, "Exported at") or first(pc, "Exported at"),
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "ads": ads,
         "logos": logos,
-        "previewLinks": build_preview_links(x.get("URLS", x.get("Preview Links"))),
+        "previewLinks": build_preview_links(tab(x, "URLS", "Preview Links")),
         "liveAssets": bool(live),
-        "liveExportedAt": clean(x["Live Assets"]["Exported at"].iloc[0]) if live else "",
-        "performance": build_performance(x.get("Campaign Performance")),
-        "perfExportedAt": clean(x["Campaign Performance"]["Exported at"].iloc[0])
-        if "Campaign Performance" in x and not x["Campaign Performance"].empty else "",
+        "liveExportedAt": first(live_tab, "Exported at") if live else "",
+        "performance": build_performance(perf_tab),
+        "perfExportedAt": first(perf_tab, "Exported at"),
     }
-    template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8")
+    template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8").replace("__CLIENT__", CLIENT["name"])
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)
+    DIST.mkdir(parents=True, exist_ok=True)
     tmp = DIST / "index.html.tmp"
     tmp.write_text(html, encoding="utf-8")
     tmp.replace(DIST / "index.html")  # atomic swap: the web server never serves a half-written page

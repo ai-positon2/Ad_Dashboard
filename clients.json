@@ -1,0 +1,14 @@
+{
+  "tealium": {
+    "name": "Tealium",
+    "sheet_id": "1lMWQI2RECyNgFqwHZ6r2gs0WhA3EsOvj2uha9Qwu-70",
+    "domain": "tealium.com",
+    "account_prefix": "Tealium - ENG - "
+  },
+  "oia": {
+    "name": "OIA",
+    "sheet_id": "1j0n9Ho8Shl6IRKphAtjOgFAMdYVdI5AmAnNTaa5-Ai4",
+    "domain": "",
+    "account_prefix": ""
+  }
+}
