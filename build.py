@@ -372,6 +372,40 @@ def apply_live(ads, live, sheet, assets):
     return out
 
 
+def fill_strengths(ads, rsa_sheet, pmax_sheet):
+    """Ad strength lives only in the Supermetrics tabs; give it to every ad the tabs cover.
+
+    PMax: one Pmax-tab block per campaign + asset group (search themes come along).
+    RSA: ads not tied to a sheet row yet (e.g. live but not served) are matched by headline overlap.
+    """
+    pm = pmax_sheet.copy()
+    pm["Campaign"] = pm["Campaign"].ffill()
+    if "Asset Group" in pm:
+        pm["Asset Group"] = pm["Asset Group"].ffill()
+    for a in ads:
+        if a["kind"] != "PMAX":
+            continue
+        rows = pm[pm["Campaign"] == a["campaign"]]
+        if "Asset Group" in pm and (rows["Asset Group"] == a["adGroup"]).any():
+            rows = rows[rows["Asset Group"] == a["adGroup"]]
+        head = rows[rows["Headline 1"].notna()]
+        if not head.empty:
+            a["strength"] = clean(head.iloc[0].get("Ad strength")) or a.get("strength", "")
+            a["themes"] = [clean(t) for t in rows["Search theme"] if clean(t)] or a.get("themes", [])
+
+    sheet = rsa_sheet[rsa_sheet["Responsive search ad headline 1"].notna()]
+    rows = [(clean(r["Campaign name"]), set(cols(r, "Responsive search ad headline", 15)), clean(r["Ad strength"]))
+            for _, r in sheet.iterrows()]
+    for a in ads:
+        if a["kind"] != "RSA" or a.get("strength") or not a.get("headlines"):
+            continue
+        heads = set(a["headlines"])
+        best = max((r for r in rows if r[0] == a["campaign"]),
+                   key=lambda r: len(r[1] & heads) / max(1, len(r[1] | heads)), default=None)
+        if best and len(best[1] & heads) / max(1, len(best[1] | heads)) >= MATCH_MIN:
+            a["strength"] = best[2]
+
+
 def account_logos(ads, live):
     """Each account's real business logo: live account asset, else the logo Google served most, else a PMax logo."""
     seen = defaultdict(lambda: defaultdict(int))
@@ -455,6 +489,7 @@ def main():
             raise SystemExit(f"'{name}' tab missing — has the combinations Google Ads Script run for {CLIENT['name']}?")
     live_tab, perf_tab = tab(x, "Live Assets"), tab(x, "Campaign Performance")
     rsa_sheet = sheet_or_empty(tab(x, "RSA and Demand Gen", "Search and Demand"), RSA_SHEET_COLS)
+    pmax_sheet = sheet_or_empty(tab(x, "Pmax"), PMAX_SHEET_COLS)
     assets = Assets()
     urls = list(live_tab["Image URL"].dropna()) if live_tab is not None and "Image URL" in live_tab else []
     for df in (rc, pc):
@@ -462,11 +497,12 @@ def main():
             urls += [a.get("url") for a in json.loads(j)]
     assets.prefetch(urls)
     ads = (build_rsa(rsa_sheet, rc.dropna(how="all"), assets)
-           + build_pmax(sheet_or_empty(tab(x, "Pmax"), PMAX_SHEET_COLS), pc.dropna(how="all"), assets)
+           + build_pmax(pmax_sheet, pc.dropna(how="all"), assets)
            + build_demand_gen(rsa_sheet))
     live = read_live(live_tab, assets)
     if live:
         ads = apply_live(ads, live, rsa_sheet, assets)
+    fill_strengths(ads, rsa_sheet, pmax_sheet)
     for a in ads:  # client asked to show Google's "Pending" ad strength as Average
         if a.get("strength", "").lower() == "pending":
             a["strength"] = "Average"
