@@ -467,6 +467,9 @@ def main():
     live = read_live(live_tab, assets)
     if live:
         ads = apply_live(ads, live, rsa_sheet, assets)
+    for a in ads:  # client asked to show Google's "Pending" ad strength as Average
+        if a.get("strength", "").lower() == "pending":
+            a["strength"] = "Average"
     logos = account_logos(ads, live)
 
     first = lambda df, col: clean(df[col].dropna().iloc[0]) if df is not None and col in df and df[col].notna().any() else ""
