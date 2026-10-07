@@ -102,6 +102,11 @@ One codebase, one Google Sheet + one Railway service per client. Rollout one cli
 - [x] **3. OIA sheet.** Sheet (1V_6OsdBZGJRclrSr_WSEfOcnex5Q3vd2anLpllsO7Cc, 13 accounts) shared "anyone with
       link can view"; user installs the 3 scripts (SPREADSHEET_URL → OIA sheet), runs once, schedules Daily.
 - [ ] **4. Build + check** OIA locally, publish a claude.ai preview, fix account-name prefix / logo issues.
-- [ ] **5. Railway.** New service from the same repo, env `CLIENT=oia`, own `DASH_PASSWORD`, shared `OPENAI_API_KEY`.
+- [x] **5. Railway.** OIA live at https://superb-kindness-production-15ec.up.railway.app. New service from the same repo, env `CLIENT=oia`, own `DASH_PASSWORD`, shared `OPENAI_API_KEY`.
 - [x] Images resized to 800px WebP + parallel downloads (OIA originals were up to 5 MB); page served gzipped.
       In-memory dry run: OIA 13 accounts / 13 logos / 78 preview links / 178 campaigns. Pushed 2026-10-07.
+
+## McHale Landscaping (2026-10-07)
+- [x] Added to `clients.json` (key `mchale`, sheet 1bUPZFes-tXHULtpCW0Ww0YrFQ0LRWnKoxFLRXlG_c5w). Local build OK:
+      6 RSA, 4 PMax, 6 DG, all with ad strength; 4 preview links matched; 12 campaigns.
+- [ ] Railway service with `CLIENT=mchale`.
