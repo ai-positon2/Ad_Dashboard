@@ -508,6 +508,7 @@ function detailList(title,items){
 function previewLinksFor(ad){
   return (DATA.previewLinks||[]).filter(l=>l.campaign===ad.campaign&&(!l.group||l.group===ad.adGroup)&&(!l.adId||l.adId===ad.id));
 }
+const MAX_PREVIEW_URL=16384;
 function previewButtons(ad){
   const links=previewLinksFor(ad);if(!links.length)return "";
   const today=new Date(new Date().toDateString());
@@ -516,6 +517,9 @@ function previewButtons(ad){
     let badge="";
     if(l.expires){const days=Math.round((new Date(l.expires)-today)/864e5);
       badge=days<0?`<span class="exp bad">expired</span>`:days<=3?`<span class="exp warn">expires in ${days} day${days===1?"":"s"}</span>`:""}
+    // Google answers 400 Bad Request to preview links over ~16 KB (the full-content kind, not the short reference kind)
+    if(Math.max((l.desktop||"").length,(l.mobile||"").length)>MAX_PREVIEW_URL)
+      badge=`<span class="exp bad" title="Google rejects links this long. Create a new share link for this ad.">link too long, Google won't open it</span>`;
     const btn=(u,lab)=>u?`<a class="glink" href="${esc(u)}" target="_blank" rel="noopener">${lab} ↗</a>`:"";
     return `<span class="gl-set">${many?`<span class="gl-n">Ad ${l.n}</span>`:""}${btn(l.desktop,"Desktop")}${btn(l.mobile,"Mobile")}${badge}</span>`;
   }).join("")}</div>`;
