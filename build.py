@@ -16,10 +16,12 @@ import re
 import sys
 import urllib.request
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+from PIL import Image
 
 ROOT = Path(__file__).parent
 CLIENTS = json.loads((ROOT / "clients.json").read_text(encoding="utf-8"))
@@ -76,8 +78,22 @@ def sheet_or_empty(df, columns):
 
 
 # --------------------------------------------------------------------- images
+IMG_MAX_PX = 800  # longest side; ad previews never show images larger than this
+
+
+def shrink(data):
+    """Uploaded originals can be 5 MB print files: resize to preview size and re-encode as WebP."""
+    im = Image.open(io.BytesIO(data))
+    im.thumbnail((IMG_MAX_PX, IMG_MAX_PX))
+    if im.mode not in ("RGB", "RGBA"):
+        im = im.convert("RGBA" if "transparency" in im.info or im.mode in ("LA", "P") else "RGB")
+    out = io.BytesIO()
+    im.save(out, "WEBP", quality=80, method=4)
+    return out.getvalue()
+
+
 class Assets:
-    """Downloads remote images once, returns the local published path."""
+    """Downloads remote images once (resized to preview size), returns the local published path."""
 
     def __init__(self):
         self.dir = DIST / "assets"
@@ -90,20 +106,23 @@ class Assets:
         if url in self.cache:
             return self.cache[url]
         key = hashlib.sha1(url.encode()).hexdigest()[:16]
-        cached = next(self.dir.glob(f"{key}.*"), None)  # assets are immutable per URL
-        if cached:
-            self.cache[url] = f"assets/{cached.name}"
-            return self.cache[url]
+        target = self.dir / f"{key}.webp"
+        old = next((f for f in self.dir.glob(f"{key}.*") if f != target), None)  # pre-resize cache file (left in place)
         try:
-            data, ctype = fetch(url)
-            ext = {"image/png": "png", "image/gif": "gif", "image/webp": "webp"}.get(ctype.split(";")[0], "jpg")
-            (self.dir / f"{key}.{ext}").write_bytes(data)
-            path = f"assets/{key}.{ext}"
+            if not target.exists():
+                data = old.read_bytes() if old else fetch(url)[0]
+                target.write_bytes(shrink(data))
+            path = f"assets/{target.name}"
         except Exception as e:  # keep building; the preview shows a placeholder
             print(f"  ! image failed {url}: {e}")
             path = ""
         self.cache[url] = path
         return path
+
+    def prefetch(self, urls):
+        """Download many images in parallel up front; later get() calls hit the cache."""
+        with ThreadPoolExecutor(16) as pool:
+            list(pool.map(self.get, {u for u in urls if u}))
 
     def video_thumb(self, vid):
         return self.get(f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg") if vid else ""
@@ -434,8 +453,13 @@ def main():
         if df is None:
             raise SystemExit(f"'{name}' tab missing — has the combinations Google Ads Script run for {CLIENT['name']}?")
     live_tab, perf_tab = tab(x, "Live Assets"), tab(x, "Campaign Performance")
-    rsa_sheet = sheet_or_empty(tab(x, "RSA and Demand Gen"), RSA_SHEET_COLS)
+    rsa_sheet = sheet_or_empty(tab(x, "RSA and Demand Gen", "Search and Demand"), RSA_SHEET_COLS)
     assets = Assets()
+    urls = list(live_tab["Image URL"].dropna()) if live_tab is not None and "Image URL" in live_tab else []
+    for df in (rc, pc):
+        for j in df["Assets JSON"].dropna():
+            urls += [a.get("url") for a in json.loads(j)]
+    assets.prefetch(urls)
     ads = (build_rsa(rsa_sheet, rc.dropna(how="all"), assets)
            + build_pmax(sheet_or_empty(tab(x, "Pmax"), PMAX_SHEET_COLS), pc.dropna(how="all"), assets)
            + build_demand_gen(rsa_sheet))

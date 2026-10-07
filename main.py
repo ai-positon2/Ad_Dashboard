@@ -10,6 +10,7 @@ Env vars
     OPENAI_MODEL    optional, default gpt-4o-mini
 """
 import base64
+import gzip
 import http.server
 import json
 import os
@@ -33,6 +34,7 @@ status = {"last_ok": None, "last_error": None}
 summary_cache = {}  # (build time, account) -> text: at most one OpenAI call per build per account
 summary_lock = threading.Lock()
 rebuild_now = threading.Event()  # set by /api/rebuild to skip the wait
+gz_cache = {}  # page mtime -> gzipped page (several MB of inline JSON; gzip cuts it ~5x)
 
 BUILDING_PAGE = b"""<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="10">
 <title>Ad Previews</title><body style="font:16px system-ui;padding:40px;color:#333">
@@ -157,7 +159,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._summary()
         if not (DIST / "index.html").exists():
             return self._send(503, BUILDING_PAGE, "text/html; charset=utf-8")
+        if self.path in ("/", "/index.html") and "gzip" in self.headers.get("Accept-Encoding", ""):
+            return self._send_page_gzipped()
         return super().do_GET()
+
+    def _send_page_gzipped(self):
+        page = DIST / "index.html"
+        mtime = page.stat().st_mtime
+        if mtime not in gz_cache:
+            gz_cache.clear()
+            gz_cache[mtime] = gzip.compress(page.read_bytes(), 6)
+        body = gz_cache[mtime]
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Encoding", "gzip")
+        self.send_header("Vary", "Accept-Encoding")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def _summary(self):
         def reply(code, obj):
