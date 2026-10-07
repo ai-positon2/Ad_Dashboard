@@ -94,12 +94,14 @@ show Google's own previews for PMax / Demand Gen if possible.
 
 ## Multi-client: OIA first (2026-10-06)
 One codebase, one Google Sheet + one Railway service per client. Rollout one client at a time.
-- [ ] **1. Client config.** `clients.json` (name, sheet id, domain, account-name prefix). `build.py` picks the
+- [x] **1. Client config.** `clients.json` (name, sheet id, domain, account-name prefix). `build.py` picks the
       client from the `CLIENT` env var or `python build.py <client>` (default tealium); output in `dist/<client>/`.
       Page title/heading come from the config. Tab names matched case-insensitively ("URLs" = "URLS").
-- [ ] **2. Supermetrics optional.** Without "RSA and Demand Gen" / "Pmax" tabs everything comes from the three
+- [x] **2. Supermetrics optional.** Without "RSA and Demand Gen" / "Pmax" tabs everything comes from the three
       scripts; only ad strength and PMax search themes are missing.
-- [ ] **3. OIA sheet.** Sheet `OIA-Ad Copies` (1j0n9Ho8Shl6IRKphAtjOgFAMdYVdI5AmAnNTaa5-Ai4) shared "anyone with
+- [x] **3. OIA sheet.** Sheet (1V_6OsdBZGJRclrSr_WSEfOcnex5Q3vd2anLpllsO7Cc, 13 accounts) shared "anyone with
       link can view"; user installs the 3 scripts (SPREADSHEET_URL → OIA sheet), runs once, schedules Daily.
 - [ ] **4. Build + check** OIA locally, publish a claude.ai preview, fix account-name prefix / logo issues.
 - [ ] **5. Railway.** New service from the same repo, env `CLIENT=oia`, own `DASH_PASSWORD`, shared `OPENAI_API_KEY`.
+- [x] Images resized to 800px WebP + parallel downloads (OIA originals were up to 5 MB); page served gzipped.
+      In-memory dry run: OIA 13 accounts / 13 logos / 78 preview links / 178 campaigns. Pushed 2026-10-07.
