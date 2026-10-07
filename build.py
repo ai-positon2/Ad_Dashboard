@@ -410,7 +410,8 @@ def build_preview_links(tab):
             continue  # rows still waiting for a link
         created = pick(r, "created", "date", "added")
         try:
-            made = pd.to_datetime(created, dayfirst=True).date()
+            # real date cells arrive as "2026-10-06 00:00:00" (year first); typed text is day-first, e.g. "28/9/2026"
+            made = pd.to_datetime(created, dayfirst=not re.match(r"\d{4}-", created)).date()
             expires = (made + pd.Timedelta(days=PREVIEW_DAYS)).isoformat()
         except (ValueError, TypeError):
             made, expires = None, ""
