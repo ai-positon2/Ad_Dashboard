@@ -26,6 +26,7 @@ from functools import partial
 
 import build
 import comments
+import notify
 
 PORT = int(os.environ.get("PORT", "8000"))
 REBUILD_HOURS = float(os.environ.get("REBUILD_HOURS", "1"))
@@ -187,10 +188,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             body = json.loads(self.rfile.read(size) or b"{}")
         except (ValueError, json.JSONDecodeError):
             return self._json(400, {"error": "Couldn't read the comment. Try again."})
-        error = comments.add(build.CLIENT_KEY, body.get("ad"), body.get("name"), body.get("text"))
+        ad_id = str(body.get("ad") or "").strip()
+        error = comments.add(build.CLIENT_KEY, ad_id, body.get("name"), body.get("text"))
         if error:
             return self._json(400, {"error": error})
-        self._json(201, {"comments": comments.list_for(build.CLIENT_KEY, str(body.get("ad")).strip())})
+        self._json(201, {"comments": comments.list_for(build.CLIENT_KEY, ad_id)})
+        try:
+            data = json.loads((DIST / "data.json").read_text(encoding="utf-8"))
+            ad = next((a for a in data["ads"] if a["id"] == ad_id), {"id": ad_id})
+        except (OSError, ValueError):
+            ad = {"id": ad_id}
+        proto = self.headers.get("X-Forwarded-Proto", "https")
+        link = f"{proto}://{self.headers.get('Host', 'localhost')}/#ad-{urllib.parse.quote(ad_id)}"
+        notify.comment_added(build.CLIENT["name"], ad, str(body.get("name")).strip(), str(body.get("text")).strip(), link)
 
     def _json(self, code, obj):
         self._send(code, json.dumps(obj).encode(), "application/json; charset=utf-8")
@@ -264,6 +274,6 @@ if __name__ == "__main__":
     server = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), partial(Handler, directory=str(DIST)))
     print(f"Serving on :{PORT}, rebuilding every {REBUILD_HOURS}h, "
           f"AI summary {'on' if OPENAI_KEY else 'off'}, comments "
-          f"{('on, stored in ' + str(comments.DATA_DIR) + ('' if comments.PERSISTENT else ' (NOT persistent: attach a volume)')) if COMMENTS else 'off'}",
-          flush=True)
+          f"{('on, stored in ' + str(comments.DATA_DIR) + ('' if comments.PERSISTENT else ' (NOT persistent: attach a volume)')) if COMMENTS else 'off'}"
+          f", {notify.describe()}", flush=True)
     server.serve_forever()
