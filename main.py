@@ -8,6 +8,8 @@ Env vars
     DASH_PASSWORD   optional; when set, the site asks for a password (any username)
     OPENAI_API_KEY  enables the AI-written account summary (/api/summary). Never commit it.
     OPENAI_MODEL    optional, default gpt-4o-mini
+    COMMENTS        "on" shows a comment box on each ad (/api/comments). Attach a Railway Volume to keep comments
+                    across deploys; see comments.py.
 """
 import base64
 import gzip
@@ -23,12 +25,14 @@ from datetime import datetime
 from functools import partial
 
 import build
+import comments
 
 PORT = int(os.environ.get("PORT", "8000"))
 REBUILD_HOURS = float(os.environ.get("REBUILD_HOURS", "1"))
 PASSWORD = os.environ.get("DASH_PASSWORD", "")
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+COMMENTS = os.environ.get("COMMENTS", "").strip().lower() in ("1", "on", "true", "yes")
 DIST = build.DIST
 status = {"last_ok": None, "last_error": None}
 summary_cache = {}  # (build time, account) -> text: at most one OpenAI call per build per account
@@ -157,11 +161,39 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._send(202, REFRESH_PAGE, "text/html; charset=utf-8")
         if self.path.startswith("/api/summary"):
             return self._summary()
+        if self.path.startswith("/api/comments"):
+            if not COMMENTS:
+                return self._json(404, {"error": "Comments aren't switched on for this dashboard."})
+            ad = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).get("ad", [""])[0]
+            return self._json(200, {"comments": comments.list_for(build.CLIENT_KEY, ad)})
         if not (DIST / "index.html").exists():
             return self._send(503, BUILDING_PAGE, "text/html; charset=utf-8")
         if self.path in ("/", "/index.html") and "gzip" in self.headers.get("Accept-Encoding", ""):
             return self._send_page_gzipped()
         return super().do_GET()
+
+    def do_POST(self):
+        if PASSWORD and not self._authorized():
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="Ad Previews"')
+            self.end_headers()
+            return
+        if not (COMMENTS and self.path.startswith("/api/comments")):
+            return self._json(404, {"error": "Not found."})
+        try:
+            size = int(self.headers.get("Content-Length") or 0)
+            if size > 16384:
+                return self._json(413, {"error": "That comment is too long."})
+            body = json.loads(self.rfile.read(size) or b"{}")
+        except (ValueError, json.JSONDecodeError):
+            return self._json(400, {"error": "Couldn't read the comment. Try again."})
+        error = comments.add(build.CLIENT_KEY, body.get("ad"), body.get("name"), body.get("text"))
+        if error:
+            return self._json(400, {"error": error})
+        self._json(201, {"comments": comments.list_for(build.CLIENT_KEY, str(body.get("ad")).strip())})
+
+    def _json(self, code, obj):
+        self._send(code, json.dumps(obj).encode(), "application/json; charset=utf-8")
 
     def _send_page_gzipped(self):
         page = DIST / "index.html"
@@ -231,5 +263,7 @@ if __name__ == "__main__":
     threading.Thread(target=rebuild_loop, daemon=True).start()
     server = http.server.ThreadingHTTPServer(("0.0.0.0", PORT), partial(Handler, directory=str(DIST)))
     print(f"Serving on :{PORT}, rebuilding every {REBUILD_HOURS}h, "
-          f"AI summary {'on' if OPENAI_KEY else 'off'}", flush=True)
+          f"AI summary {'on' if OPENAI_KEY else 'off'}, comments "
+          f"{('on, stored in ' + str(comments.DATA_DIR) + ('' if comments.PERSISTENT else ' (NOT persistent: attach a volume)')) if COMMENTS else 'off'}",
+          flush=True)
     server.serve_forever()

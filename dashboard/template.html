@@ -235,6 +235,23 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 .agrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:22px 28px}
 .agrid.media{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
 .aset.wide{grid-column:1/-1}
+.acol{display:flex;flex-direction:column;gap:22px;min-width:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cbox{background:var(--sunk);border-radius:10px;padding:14px 16px}
+.cform{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.cform input,.cform textarea{font:13.5px/1.45 var(--ui);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;box-sizing:border-box}
+.cform textarea{resize:vertical;min-height:72px}
+.cform input:focus-visible,.cform textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.crow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cbtn{font:600 13px var(--ui);background:var(--accent);color:var(--on-accent);border:0;border-radius:8px;padding:7px 14px;cursor:pointer}
+.cbtn:disabled{opacity:.6;cursor:default}
+.cstat{font-size:12.5px;color:var(--muted)}
+.clist{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column}
+.clist li{padding:10px 0;border-top:1px solid var(--line)}
+.chead{display:flex;justify-content:space-between;gap:10px;font-size:12.5px}
+.chead span{color:var(--faint);font-family:var(--mono);font-size:11.5px;white-space:nowrap}
+.clist p{margin:4px 0 0;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.cnone{margin:12px 0 0;font-size:13px;color:var(--faint)}
 .aset h3 .n{font-family:var(--mono);color:var(--faint);letter-spacing:0;margin-left:4px}
 .alist,.slist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
 .alist li{display:flex;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
@@ -532,13 +549,64 @@ function assetsPanel(ad){
   const logo=logoFor(ad,[]),logos=(ad.logos&&ad.logos.length)?ad.logos:(logo?[logo]:[]);
   const imgExt=(x.images&&x.images.length)?x.images:servedImages(ad,"AD_IMAGE");
   const brand=[bizName(ad,[])].filter(Boolean);
-  const text=`<div class="agrid">${textList("Headlines",ad.headlines,LIMIT.headline,ad.pins)}${textList("Long headlines",ad.longHeadlines,LIMIT.long)}${textList("Descriptions",ad.descriptions,LIMIT.description,ad.pins)}${sitelinkList(sitelinks)}${chipList("Callouts",callouts)}${chipList("Structured snippets",snippets)}${detailList("Prices",x.prices)}${detailList("Promotions",x.promotions)}${detailList("Call",x.calls)}${detailList("App",x.apps)}${chipList("Business name",brand)}${ad.cta?chipList("Call to action",[prettyCta(ad.cta)]):""}</div>`;
+  const text=`<div class="agrid">${textList("Headlines",ad.headlines,LIMIT.headline,ad.pins)}${textList("Long headlines",ad.longHeadlines,LIMIT.long)}<div class="acol">${textList("Descriptions",ad.descriptions,LIMIT.description,ad.pins)}${commentBox(ad)}</div>${sitelinkList(sitelinks)}${chipList("Callouts",callouts)}${chipList("Structured snippets",snippets)}${detailList("Prices",x.prices)}${detailList("Promotions",x.promotions)}${detailList("Call",x.calls)}${detailList("App",x.apps)}${chipList("Business name",brand)}${ad.cta?chipList("Call to action",[prettyCta(ad.cta)]):""}</div>`;
   const media=gallery("Images",ad.images)+gallery("Image extensions",imgExt.map(i=>({img:i})))+gallery("Logos",logos.map(l=>({img:l})))+gallery("Videos",ad.videoThumbs,true)+(ad.themes&&ad.themes.length?chipList("Search themes",ad.themes):"");
   const src=ad.live?`Live in Google Ads as of ${esc(DATA.liveExportedAt)}`
     :served?"Assets from the ad-copy sheet plus what Google served"
     :"Assets from the ad-copy sheet";
   return `<div class="phead"><h3>${ad.live?"Live assets":"Assets"}</h3><span class="src">${src}</span></div>${text}${media?`<div class="agrid media">${media}</div>`:""}`;
 }
+
+/* Comments: served by main.py when the service has COMMENTS=on; anywhere else the box never appears. */
+const cm={on:null,byAd:{},draft:{}};
+function whenText(iso){const d=new Date(iso);return isNaN(d)?iso:d.toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
+function commentBox(ad){
+  if(cm.on===false)return "";
+  const list=cm.byAd[ad.id];
+  if(!list)return `<section class="aset cbox" id="cbox" hidden></section>`;
+  return `<section class="aset cbox" id="cbox">${commentInner(ad,list)}</section>`;
+}
+function commentInner(ad,list){
+  return `<h3>Comments <span class="n">${list.length}</span></h3>
+    <form class="cform" data-ad="${esc(ad.id)}">
+      <label class="sr" for="cName">Your name</label>
+      <input id="cName" name="name" maxlength="80" placeholder="Your name" autocomplete="name" value="${esc(store.get("commentName",""))}">
+      <label class="sr" for="cText">Comment</label>
+      <textarea id="cText" name="text" maxlength="2000" rows="3" placeholder="Add a comment on this ad's copy or assets">${esc(cm.draft[ad.id]||"")}</textarea>
+      <div class="crow"><button type="submit" class="cbtn">Add comment</button><span class="cstat" role="status"></span></div>
+    </form>
+    ${list.length?`<ul class="clist">${list.map(c=>`<li><div class="chead"><b>${esc(c.name)}</b><span>${esc(whenText(c.at))}</span></div><p>${esc(c.text)}</p></li>`).join("")}</ul>`
+      :`<p class="cnone">No comments yet.</p>`}`;
+}
+function fillComments(ad){
+  const box=$("#cbox");if(!box||state.sel!==ad.id)return;
+  box.innerHTML=commentInner(ad,cm.byAd[ad.id]);box.hidden=false;
+}
+function loadComments(ad){
+  if(cm.on===false||cm.byAd[ad.id])return;
+  fetch("api/comments?ad="+encodeURIComponent(ad.id),{cache:"no-store"})
+    .then(r=>r.ok?r.json():Promise.reject(r.status))
+    .then(j=>{cm.on=true;cm.byAd[ad.id]=j.comments||[];fillComments(ad)})
+    .catch(()=>{cm.on=false;const b=$("#cbox");if(b)b.remove()});
+}
+$("#detail").addEventListener("input",e=>{
+  const f=e.target.closest(".cform");if(!f)return;
+  if(e.target.name==="text")cm.draft[f.dataset.ad]=e.target.value;
+  if(e.target.name==="name")store.set("commentName",e.target.value);
+});
+$("#detail").addEventListener("submit",e=>{
+  const f=e.target.closest(".cform");if(!f)return;
+  e.preventDefault();
+  const ad=ads.find(a=>a.id===f.dataset.ad),stat=f.querySelector(".cstat"),btn=f.querySelector(".cbtn");
+  const name=f.elements.name.value.trim(),text=f.elements.text.value.trim();
+  if(!name){stat.textContent="Add your name first.";f.elements.name.focus();return}
+  if(!text){stat.textContent="Write a comment first.";f.elements.text.focus();return}
+  btn.disabled=true;stat.textContent="Saving…";
+  fetch("api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ad:ad.id,name,text})})
+    .then(r=>r.json().then(j=>r.ok?j:Promise.reject(j.error||"Couldn't save the comment.")))
+    .then(j=>{cm.byAd[ad.id]=j.comments||[];cm.draft[ad.id]="";fillComments(ad);const s=$("#cbox .cstat");if(s)s.textContent="Comment added."})
+    .catch(err=>{btn.disabled=false;stat.textContent=typeof err==="string"?err:"Couldn't save the comment. Check your connection and try again."});
+});
 
 function renderDetail(){
   const el=$("#detail"),ad=ads.find(a=>a.id===state.sel);
@@ -590,6 +658,7 @@ function renderDetail(){
     </div>
   </div>
   <div class="panel">${assetsPanel(ad)}</div>`;
+  loadComments(ad);
 }
 $("#detail").addEventListener("click",e=>{
   const s=e.target.closest(".seg[data-key] button");
