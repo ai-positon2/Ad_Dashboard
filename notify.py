@@ -1,57 +1,52 @@
-"""Email a notification for each new comment.
+"""Email a notification for each new comment, through a Google Apps Script web app.
+
+The script (google-apps-script/comment_notifier.gs) runs in the team's own Google account and emails the alias set
+inside it, so the dashboard never holds an email password.
 
 Env vars (set on the Railway service; never commit them)
-    NOTIFY_TO    comma-separated recipients, e.g. a team alias. Unset = no emails.
-    SMTP_USER    the sending account, e.g. a Gmail address
-    SMTP_PASS    its app password (Gmail: Google Account > Security > 2-Step Verification > App passwords)
-    SMTP_HOST    default smtp.gmail.com
-    SMTP_PORT    default 587 (STARTTLS)
-    NOTIFY_FROM  optional display address, default SMTP_USER
+    NOTIFY_WEBHOOK  the Apps Script web app URL (ends in /exec). Unset = no emails.
+    NOTIFY_SECRET   the same secret word set as SECRET in the script
 """
+import json
 import os
-import smtplib
-import ssl
 import threading
 import traceback
-from email.message import EmailMessage
+import urllib.request
 
-TO = [a.strip() for a in os.environ.get("NOTIFY_TO", "").split(",") if a.strip()]
-USER = os.environ.get("SMTP_USER", "")
-PASS = os.environ.get("SMTP_PASS", "")
-HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
-PORT = int(os.environ.get("SMTP_PORT", "587"))
-FROM = os.environ.get("NOTIFY_FROM", "") or USER
-ENABLED = bool(TO and USER and PASS)
+WEBHOOK = os.environ.get("NOTIFY_WEBHOOK", "").strip()
+SECRET = os.environ.get("NOTIFY_SECRET", "").strip()
+ENABLED = bool(WEBHOOK and SECRET)
 
 
 def describe():
     if ENABLED:
-        return f"emails to {', '.join(TO)}"
-    missing = [n for n, v in (("NOTIFY_TO", TO), ("SMTP_USER", USER), ("SMTP_PASS", PASS)) if not v]
-    return "emails off" + (f" (missing {', '.join(missing)})" if TO or USER or PASS else "")
+        return "comment emails on"
+    if WEBHOOK or SECRET:
+        return "comment emails off (set both NOTIFY_WEBHOOK and NOTIFY_SECRET)"
+    return "comment emails off"
 
 
 def comment_added(client, ad, name, text, link):
-    """Send in the background so posting a comment never waits on the mail server."""
+    """Send in the background so posting a comment never waits on Google."""
     if ENABLED:
         threading.Thread(target=_send, args=(client, ad, name, text, link), daemon=True).start()
 
 
 def _send(client, ad, name, text, link):
     where = " › ".join(p for p in (ad.get("account"), ad.get("campaign"), ad.get("adGroup")) if p)
-    msg = EmailMessage()
-    msg["Subject"] = f"[{client} Ad Previews] {name} commented on {ad.get('adGroup') or ad.get('campaign') or 'an ad'}"
-    msg["From"] = FROM
-    msg["To"] = ", ".join(TO)
-    msg.set_content(f"{name} left a comment on the {client} ad previews dashboard.\n\n"
-                    f"Ad: {where}\nType: {ad.get('kind', '')}  ·  Ad ID: {ad.get('id', '')}\n\n"
-                    f"{text}\n\nOpen the ad: {link}\n")
+    payload = {
+        "secret": SECRET,
+        "subject": f"[{client} Ad Previews] {name} commented on {ad.get('adGroup') or ad.get('campaign') or 'an ad'}",
+        "body": (f"{name} left a comment on the {client} ad previews dashboard.\n\n"
+                 f"Ad: {where}\nType: {ad.get('kind', '')}  ·  Ad ID: {ad.get('id', '')}\n\n"
+                 f"{text}\n\nOpen the ad: {link}\n"),
+    }
+    req = urllib.request.Request(WEBHOOK, data=json.dumps(payload).encode(), method="POST",
+                                 headers={"Content-Type": "application/json"})
     try:
-        with smtplib.SMTP(HOST, PORT, timeout=30) as s:
-            s.starttls(context=ssl.create_default_context())
-            s.login(USER, PASS)
-            s.send_message(msg)
-        print(f"comment email sent to {', '.join(TO)}", flush=True)
+        with urllib.request.urlopen(req, timeout=30) as r:  # Apps Script answers via a redirect; urllib follows it
+            reply = r.read().decode("utf-8", "ignore")
+        print(f"comment email: {reply[:120]}", flush=True)
     except Exception:
         print("comment email failed:", flush=True)
         traceback.print_exc()
