@@ -64,3 +64,13 @@ def after(client, last_id, limit=50):
     rows = _run("SELECT id, ad, name, text, created FROM comments WHERE client = ? AND id > ? ORDER BY id LIMIT ?",
                 (client, int(last_id), limit))
     return [{"id": r[0], "ad": r[1], "name": r[2], "text": r[3], "at": r[4]} for r in rows]
+
+
+def delete(client, ids):
+    """Remove comments by id (admin clean-up); returns how many were deleted."""
+    ids = [int(i) for i in ids]
+    if not ids:
+        return 0
+    before = len(_run(f"SELECT id FROM comments WHERE client = ? AND id IN ({','.join('?' * len(ids))})", (client, *ids)))
+    _run(f"DELETE FROM comments WHERE client = ? AND id IN ({','.join('?' * len(ids))})", (client, *ids))
+    return before

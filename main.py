@@ -179,6 +179,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        if self.path.startswith("/api/comments/delete"):  # admin clean-up, authenticated with NOTIFY_SECRET
+            return self._delete_comments()
         if PASSWORD and not self._authorized():
             self.send_response(401)
             self.send_header("WWW-Authenticate", 'Basic realm="Ad Previews"')
@@ -198,6 +200,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if error:
             return self._json(400, {"error": error})
         self._json(201, {"comments": comments.list_for(build.CLIENT_KEY, ad_id)})
+
+    def _delete_comments(self):
+        try:
+            body = json.loads(self.rfile.read(min(int(self.headers.get("Content-Length") or 0), 16384)) or b"{}")
+        except (ValueError, json.JSONDecodeError):
+            return self._json(400, {"error": "bad request"})
+        if not (COMMENTS and NOTIFY_SECRET) or not hmac.compare_digest(str(body.get("key", "")), NOTIFY_SECRET):
+            return self._json(403, {"error": "forbidden"})
+        try:
+            n = comments.delete(build.CLIENT_KEY, body.get("ids") or [])
+        except (TypeError, ValueError):
+            return self._json(400, {"error": "ids must be a list of comment numbers"})
+        self._json(200, {"deleted": n})
 
     def _new_comments(self):
         """Comments after ?after=<id>, with each ad's campaign and ad group, for the email notifier."""
