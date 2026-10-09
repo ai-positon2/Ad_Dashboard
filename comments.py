@@ -57,3 +57,10 @@ def add(client, ad, name, text):
     _run("INSERT INTO comments (client, ad, name, text, created) VALUES (?, ?, ?, ?, ?)",
          (client, ad, name, text, created))
     return None
+
+
+def after(client, last_id, limit=50):
+    """Comments newer than last_id (oldest first), for the Apps Script that emails the team."""
+    rows = _run("SELECT id, ad, name, text, created FROM comments WHERE client = ? AND id > ? ORDER BY id LIMIT ?",
+                (client, int(last_id), limit))
+    return [{"id": r[0], "ad": r[1], "name": r[2], "text": r[3], "at": r[4]} for r in rows]

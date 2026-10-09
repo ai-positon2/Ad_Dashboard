@@ -10,9 +10,12 @@ Env vars
     OPENAI_MODEL    optional, default gpt-4o-mini
     COMMENTS        "on" shows a comment box on each ad (/api/comments). Attach a Railway Volume to keep comments
                     across deploys; see comments.py.
+    NOTIFY_SECRET   secret word shared with google-apps-script/comment_notifier.gs, which polls
+                    /api/comments/new and emails the team about new comments
 """
 import base64
 import gzip
+import hmac
 import http.server
 import json
 import os
@@ -26,7 +29,6 @@ from functools import partial
 
 import build
 import comments
-import notify
 
 PORT = int(os.environ.get("PORT", "8000"))
 REBUILD_HOURS = float(os.environ.get("REBUILD_HOURS", "1"))
@@ -34,6 +36,7 @@ PASSWORD = os.environ.get("DASH_PASSWORD", "")
 OPENAI_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 COMMENTS = os.environ.get("COMMENTS", "").strip().lower() in ("1", "on", "true", "yes")
+NOTIFY_SECRET = os.environ.get("NOTIFY_SECRET", "").strip()  # lets the Apps Script notifier read new comments
 DIST = build.DIST
 status = {"last_ok": None, "last_error": None}
 summary_cache = {}  # (build time, account) -> text: at most one OpenAI call per build per account
@@ -152,6 +155,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path == "/healthz":
             return self._send(200, f"ok last_build={status['last_ok']} error={status['last_error']}".encode(),
                               "text/plain")
+        if self.path.startswith("/api/comments/new"):  # the notifier authenticates with the secret, not the password
+            return self._new_comments()
         if PASSWORD and not self._authorized():
             self.send_response(401)
             self.send_header("WWW-Authenticate", 'Basic realm="Ad Previews"')
@@ -193,14 +198,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if error:
             return self._json(400, {"error": error})
         self._json(201, {"comments": comments.list_for(build.CLIENT_KEY, ad_id)})
+
+    def _new_comments(self):
+        """Comments after ?after=<id>, with each ad's campaign and ad group, for the email notifier."""
+        q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+        if not (COMMENTS and NOTIFY_SECRET) or not hmac.compare_digest(q.get("key", [""])[0], NOTIFY_SECRET):
+            return self._json(403, {"error": "forbidden"})
         try:
-            data = json.loads((DIST / "data.json").read_text(encoding="utf-8"))
-            ad = next((a for a in data["ads"] if a["id"] == ad_id), {"id": ad_id})
-        except (OSError, ValueError):
-            ad = {"id": ad_id}
-        proto = self.headers.get("X-Forwarded-Proto", "https")
-        link = f"{proto}://{self.headers.get('Host', 'localhost')}/#ad-{urllib.parse.quote(ad_id)}"
-        notify.comment_added(build.CLIENT["name"], ad, str(body.get("name")).strip(), str(body.get("text")).strip(), link)
+            after = int(q.get("after", ["0"])[0])
+        except ValueError:
+            after = 0
+        try:
+            ads = {a["id"]: a for a in json.loads((DIST / "data.json").read_text(encoding="utf-8"))["ads"]}
+        except (OSError, ValueError, KeyError):
+            ads = {}
+        new = comments.after(build.CLIENT_KEY, after)
+        for c in new:
+            a = ads.get(c["ad"], {})
+            c["where"] = {k: a.get(k, "") for k in ("account", "campaign", "adGroup", "kind")}
+        self._json(200, {"client": build.CLIENT["name"], "comments": new, "last": max([after] + [c["id"] for c in new])})
 
     def _json(self, code, obj):
         self._send(code, json.dumps(obj).encode(), "application/json; charset=utf-8")
@@ -275,5 +291,5 @@ if __name__ == "__main__":
     print(f"Serving on :{PORT}, rebuilding every {REBUILD_HOURS}h, "
           f"AI summary {'on' if OPENAI_KEY else 'off'}, comments "
           f"{('on, stored in ' + str(comments.DATA_DIR) + ('' if comments.PERSISTENT else ' (NOT persistent: attach a volume)')) if COMMENTS else 'off'}"
-          f", {notify.describe()}", flush=True)
+          f", comment emails {'on' if COMMENTS and NOTIFY_SECRET else 'off'}", flush=True)
     server.serve_forever()
