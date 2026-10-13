@@ -26,6 +26,7 @@ from pathlib import Path
 import pandas as pd
 
 API = "https://googleads.googleapis.com/v24"
+PREVIEW_API = "https://googleads.googleapis.com/v23"  # v24 changed the shareable-preview request shape; v23 is documented and works
 DATE_RANGE = "LAST_30_DAYS"
 MAX_RSA_COMBOS = 20
 MAX_PMAX_COMBOS = 20
@@ -103,13 +104,13 @@ class Api:
             self.token_at = time.time()
             return self.token
 
-    def _post(self, cid, body):
+    def _post(self, cid, body, path="/googleAds:search", api=API):
         headers = {"Authorization": "Bearer " + self._access_token(), "developer-token": self.c["developer_token"],
                    "Content-Type": "application/json"}
         if self.login:
             headers["login-customer-id"] = self.login
         for attempt in range(5):
-            req = urllib.request.Request(f"{API}/customers/{cid}/googleAds:search", json.dumps(body).encode(),
+            req = urllib.request.Request(f"{api}/customers/{cid}{path}", json.dumps(body).encode(),
                                          headers, method="POST")
             try:
                 self.requests += 1
@@ -575,6 +576,30 @@ def strengths(api, acct, log):
     return out
 
 
+# ------------------------------------------------------ Google's preview links
+def previews(api, acct, groups, now, log):
+    """Google's own shareable preview link for each PMax asset group. Google supports no other ad type
+    here (Demand Gen / RSA return UNSUPPORTED_AD_TYPE). Links last 14 days; every pull makes fresh ones."""
+    out, ids = [], sorted(groups)
+    for i in range(0, len(ids), 50):
+        batch = ids[i:i + 50]
+        try:
+            r = api._post(acct["id"], {"shareablePreviews": [{"assetGroupIdentifier": {"assetGroupId": x}} for x in batch]},
+                          ":generateShareablePreviews", PREVIEW_API)
+        except ApiError as e:
+            log(f"preview links failed (continuing without them): {e}")
+            continue
+        for x in r.get("responses", []):
+            res, gid = x.get("shareablePreviewResult"), g(x, "assetGroupIdentifier", "assetGroupId")
+            if res and res.get("shareablePreviewUrl") and gid in groups:
+                out.append({"id": gid, "campaign": groups[gid][0], "group": groups[gid][1],
+                            "url": res["shareablePreviewUrl"], "expires": str(res.get("expirationDateTime", ""))[:10],
+                            "created": now[:10]})
+            else:  # Google declines groups without enough assets, and Demand Gen / RSA outright
+                log(f'no preview link for asset group {gid}: {g(x, "partialFailureError", "message") or "none returned (too few assets?)"}')
+    return out
+
+
 # ---------------------------------------------------------------- entry point
 def _pull_account(api, acct, now):
     msgs = []
@@ -583,7 +608,9 @@ def _pull_account(api, acct, now):
     live = live_assets(api, acct, now, log)
     perf = performance(api, acct, now, log)
     st = strengths(api, acct, log)
-    return {"rsa": rsa, "pmax": pmax, "live": live, "perf": perf, "strengths": st, "log": msgs}
+    groups = {r[6]: (r[3], r[5]) for r in live if r[2] == "ASSET_GROUP"}  # owner id -> (campaign, asset group)
+    return {"rsa": rsa, "pmax": pmax, "live": live, "perf": perf, "strengths": st,
+            "previews": previews(api, acct, groups, now, log), "log": msgs}
 
 
 def pull(client):
@@ -601,9 +628,9 @@ def pull(client):
     with ThreadPoolExecutor(WORKERS) as pool:
         results = list(pool.map(lambda a: _pull_account(api, a, now), accounts))
     out = {"pulledAt": now, "pulledTs": time.time(), "accounts": [a["name"] for a in accounts], "log": [],
-           "rsa": [], "pmax": [], "live": [], "perf": [], "strengths": {"ad": {}, "ag": {}, "themes": {}}}
+           "rsa": [], "pmax": [], "live": [], "perf": [], "previews": [], "strengths": {"ad": {}, "ag": {}, "themes": {}}}
     for r in results:
-        for k in ("rsa", "pmax", "live", "perf", "log"):
+        for k in ("rsa", "pmax", "live", "perf", "previews", "log"):
             out[k] += r[k]
         for k in ("ad", "ag", "themes"):
             out["strengths"][k].update(r["strengths"][k])

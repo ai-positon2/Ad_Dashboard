@@ -538,7 +538,7 @@ function previewButtons(ad){
     if(Math.max((l.desktop||"").length,(l.mobile||"").length)>MAX_PREVIEW_URL)
       badge=`<span class="exp bad" title="Google rejects links this long. Create a new share link for this ad.">link too long, Google won't open it</span>`;
     const btn=(u,lab)=>u?`<a class="glink" href="${esc(u)}" target="_blank" rel="noopener">${lab} ↗</a>`:"";
-    return `<span class="gl-set">${many?`<span class="gl-n">Ad ${l.n}</span>`:""}${btn(l.desktop,"Desktop")}${btn(l.mobile,"Mobile")}${badge}</span>`;
+    return `<span class="gl-set">${many?`<span class="gl-n">Ad ${l.n}</span>`:""}${l.single?btn(l.desktop,"Open preview"):btn(l.desktop,"Desktop")+btn(l.mobile,"Mobile")}${badge}</span>`;
   }).join("")}</div>`;
 }
 function assetsPanel(ad){

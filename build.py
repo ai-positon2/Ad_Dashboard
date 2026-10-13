@@ -460,6 +460,15 @@ def build_preview_links(tab):
     return out
 
 
+def merge_preview_links(manual, api_data):
+    """Links from Google's API (PMax only, always fresh) replace hand-made ones for the same asset group."""
+    api_links = [{"campaign": p["campaign"], "group": p["group"], "adId": p["id"], "format": "Performance Max", "n": 1,
+                  "desktop": p["url"], "mobile": "", "single": True, "created": p["created"], "expires": p["expires"]}
+                 for p in (api_data or {}).get("previews", [])]
+    covered = {(l["campaign"], l["group"]) for l in api_links}
+    return [l for l in manual if (l["campaign"], l["group"]) not in covered] + api_links
+
+
 # ----------------------------------------------------- campaign performance
 def build_performance(tab):
     """Spend/clicks/conversions per enabled campaign, from the Google Ads Script's tab."""
@@ -564,7 +573,7 @@ def main():
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "ads": ads,
         "logos": logos,
-        "previewLinks": build_preview_links(tab(x, "URLS", "Preview Links")),
+        "previewLinks": merge_preview_links(build_preview_links(tab(x, "URLS", "Preview Links")), api_data),
         "liveAssets": bool(live),
         "liveExportedAt": first(live_tab, "Exported at") if live else "",
         "performance": build_performance(perf_tab),
