@@ -28,6 +28,7 @@ from datetime import datetime
 from functools import partial
 
 import build
+import gads_api
 import comments
 
 PORT = int(os.environ.get("PORT", "8000"))
@@ -46,10 +47,10 @@ gz_cache = {}  # page mtime -> gzipped page (several MB of inline JSON; gzip cut
 
 BUILDING_PAGE = b"""<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="10">
 <title>Ad Previews</title><body style="font:16px system-ui;padding:40px;color:#333">
-<p>Building the dashboard from the Google Sheet. This page refreshes in a few seconds.</p>"""
+<p>Building the dashboard. This page refreshes in a few seconds.</p>"""
 REFRESH_PAGE = b"""<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="75;url=/">
 <title>Ad Previews</title><body style="font:16px system-ui;padding:40px;color:#333">
-<p>Re-reading the Google Sheet. The dashboard reloads with the new data in about a minute.</p>
+<p>Refreshing the data. The dashboard reloads with the new data in about a minute.</p>
 <p><a href="/">Back to the dashboard now</a></p>"""
 
 
@@ -163,6 +164,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             return
         if self.path.startswith("/api/rebuild"):
+            gads_api.FORCE.set()  # no-op for sheet clients; API clients re-query Google Ads (rate-limited)
             rebuild_now.set()
             return self._send(202, REFRESH_PAGE, "text/html; charset=utf-8")
         if self.path.startswith("/api/summary"):

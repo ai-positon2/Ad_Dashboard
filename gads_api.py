@@ -34,6 +34,8 @@ WORKERS = 4  # accounts pulled in parallel; kept low to stay well inside Google'
 ROOT = Path(__file__).parent
 CACHE_DIR = Path(os.environ.get("GADS_CACHE_DIR", ROOT / "cache"))
 CACHE_HOURS = float(os.environ.get("GADS_CACHE_HOURS", "6"))
+MIN_REFRESH_MINUTES = float(os.environ.get("GADS_MIN_REFRESH_MINUTES", "10"))  # floor between manual refreshes
+FORCE = threading.Event()  # set by the dashboard's "Refresh" link: pull again even inside the cache window
 
 RSA_HEADER = ["Account", "Customer ID", "Campaign", "Ad group", "Ad ID", "Rank", "Impressions", "Enabled",
               "Final URL", "Path 1", "Path 2", "Headline 1", "Headline 2", "Headline 3", "Description 1",
@@ -622,8 +624,12 @@ def load_or_pull(key, client):
             cached = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             cached = None
-    if cached and time.time() - cached.get("pulledTs", 0) < CACHE_HOURS * 3600:
-        print(f"Google Ads API: using cache from {cached['pulledAt']} ({CACHE_HOURS:g}h window)")
+    age = time.time() - cached.get("pulledTs", 0) if cached else None
+    forced = FORCE.is_set()
+    FORCE.clear()
+    if cached and age < (MIN_REFRESH_MINUTES * 60 if forced else CACHE_HOURS * 3600):
+        why = f"{MIN_REFRESH_MINUTES:g} min refresh floor" if forced else f"{CACHE_HOURS:g}h window"
+        print(f"Google Ads API: using cache from {cached['pulledAt']} ({why})")
         return cached
     try:
         data = pull(client)
