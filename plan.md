@@ -123,8 +123,9 @@ build falls back to the sheet. Credentials: env vars (`GADS_CLIENT_ID/SECRET`, `
 - [x] **1. Discover OIA accounts** under the OIA MCC (13, matches the sheet); every query type works at Explorer access.
 - [x] **2. `gads_api.py`**: combinations, live assets, performance, ad strength/search themes. ~22 requests per account (275 for OIA, 76s).
 - [x] **3. Wire into `build.py`** (`source: api`), sheet fallback; OIA diffed against the sheet-based build: same 310 RSA + 79 PMax ads, identical headlines/descriptions/URLs/paths, ad strength now filled for all (110 were blank). Demand Gen verified on McHale.
-- [ ] **4. Deploy**: Railway env vars for the OIA service, commit/push, watch the first hourly rebuild.
-- [ ] **5. Roll out** to Tealium and McHale (one at a time).
+- [x] **4. Deploy** (2026-10-13): OIA live on the API. GADS_* kept once as Railway *Shared Variables* and attached to each service.
+- [~] **5. Roll out**: McHale switched to the API (diff vs sheet build: identical ads, copy, strengths, preview links). Tealium next.
+- [x] **6. Soteri Skin** (new client, API-only, no sheet): account 9557969390, soteriskin.com. 14 RSA / 4 PMax / 8 DG; renders OK locally. `sheet_id` is now optional in clients.json. Railway service still to be created (CLIENT=soteri).
 Hiccups are logged below.
 
 Hiccups / notes (2026-10-13)
@@ -135,3 +136,6 @@ Hiccups / notes (2026-10-13)
 - If the OAuth consent screen is External + Testing, Google expires refresh tokens after 7 days; the build then
   falls back to the last cache / the sheet and logs the error.
 - The sheet is still read for the hand-made URLS preview-link tab. The 3 Ads Scripts can stay running until the API is trusted.
+- "Refresh" link now says "Refresh from Google Ads" for API clients and forces a fresh pull (>=10 min apart, `GADS_MIN_REFRESH_MINUTES`).
+- Railway: a shared variable only reaches a service after it is added in that service's Variables tab (first attempt fell back to the sheet).
+- Soteri also has 1 Shopping campaign, which the dashboard doesn't show (no Shopping ad type).

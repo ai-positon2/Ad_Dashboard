@@ -498,7 +498,7 @@ def apply_api_strengths(ads, st):
 def load_tables():
     """-> (tabs by name, API pull or None). `source: api` clients read Google Ads directly (cached); the sheet
     is then only needed for the hand-made URLS preview-link tab. Falls back to the sheet if the API isn't usable."""
-    url = f"https://docs.google.com/spreadsheets/d/{CLIENT['sheet_id']}/export?format=xlsx"
+    sheet_id = CLIENT.get("sheet_id", "")
     api_data = None
     if CLIENT.get("source") == "api":
         if not gads_api.available():
@@ -508,9 +508,13 @@ def load_tables():
                 api_data = gads_api.load_or_pull(CLIENT_KEY, CLIENT)
             except Exception as e:
                 print(f"! Google Ads API failed ({e}); falling back to the sheet")
+    if not sheet_id:  # API-only client: no ad-copy sheet, so no hand-made preview links
+        if api_data is None:
+            raise SystemExit(f"{CLIENT['name']} has no sheet_id and the Google Ads API is unavailable")
+        return gads_api.frames(api_data), api_data
     print("Downloading sheet...")
     try:
-        data, _ = fetch(url)
+        data, _ = fetch(f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=xlsx")
         x = pd.read_excel(io.BytesIO(data), sheet_name=None, dtype=str)
     except Exception as e:
         if api_data is None:
