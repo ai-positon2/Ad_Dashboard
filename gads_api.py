@@ -51,7 +51,8 @@ PERF_HEADER = ["Account", "Customer ID", "Currency", "Campaign", "Channel", "Sta
 
 # ----------------------------------------------------------------- credentials
 def _creds():
-    env = {k: os.environ.get(f"GADS_{k.upper()}", "") for k in
+    clean = lambda v: v.strip().strip("\"'").strip()  # pasted values often carry spaces, newlines or quotes
+    env = {k: clean(os.environ.get(f"GADS_{k.upper()}", "")) for k in
            ("client_id", "client_secret", "developer_token", "refresh_token", "login_customer_id")}
     if all(env[k] for k in ("client_id", "client_secret", "developer_token", "refresh_token")):
         return env
@@ -87,7 +88,16 @@ class Api:
             data = urllib.parse.urlencode({
                 "client_id": self.c["client_id"], "client_secret": self.c["client_secret"],
                 "refresh_token": self.c["refresh_token"], "grant_type": "refresh_token"}).encode()
-            self.token = json.load(urllib.request.urlopen("https://oauth2.googleapis.com/token", data, timeout=30))["access_token"]
+            try:
+                self.token = json.load(urllib.request.urlopen("https://oauth2.googleapis.com/token", data, timeout=30))["access_token"]
+            except urllib.error.HTTPError as e:  # say why Google refused (error name only, never the credentials)
+                try:
+                    body = json.loads(e.read().decode("utf-8", "replace"))
+                    why = f'{body.get("error", "")}: {body.get("error_description", "")}'.strip(": ")
+                except ValueError:
+                    why = ""
+                raise RuntimeError(f"Google OAuth token refresh rejected (HTTP {e.code}) {why} - check GADS_CLIENT_ID, "
+                                   "GADS_CLIENT_SECRET and GADS_REFRESH_TOKEN") from None
             self.token_at = time.time()
             return self.token
 
