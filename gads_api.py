@@ -35,6 +35,7 @@ WORKERS = 4  # accounts pulled in parallel; kept low to stay well inside Google'
 ROOT = Path(__file__).parent
 CACHE_DIR = Path(os.environ.get("GADS_CACHE_DIR", ROOT / "cache"))
 CACHE_HOURS = float(os.environ.get("GADS_CACHE_HOURS", "6"))
+CACHE_VERSION = 2  # bump when the pulled data gains a field, so older caches are discarded instead of reused
 MIN_REFRESH_MINUTES = float(os.environ.get("GADS_MIN_REFRESH_MINUTES", "10"))  # floor between manual refreshes
 FORCE = threading.Event()  # set by the dashboard's "Refresh" link: pull again even inside the cache window
 
@@ -627,7 +628,7 @@ def pull(client):
     t0 = time.time()
     with ThreadPoolExecutor(WORKERS) as pool:
         results = list(pool.map(lambda a: _pull_account(api, a, now), accounts))
-    out = {"pulledAt": now, "pulledTs": time.time(), "accounts": [a["name"] for a in accounts], "log": [],
+    out = {"version": CACHE_VERSION, "pulledAt": now, "pulledTs": time.time(), "accounts": [a["name"] for a in accounts], "log": [],
            "rsa": [], "pmax": [], "live": [], "perf": [], "previews": [], "strengths": {"ad": {}, "ag": {}, "themes": {}}}
     for r in results:
         for k in ("rsa", "pmax", "live", "perf", "previews", "log"):
@@ -651,6 +652,9 @@ def load_or_pull(key, client):
             cached = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             cached = None
+    if cached and cached.get("version") != CACHE_VERSION:
+        print("Google Ads API: cache is from an older version, pulling fresh data")
+        cached = None
     age = time.time() - cached.get("pulledTs", 0) if cached else None
     forced = FORCE.is_set()
     FORCE.clear()
