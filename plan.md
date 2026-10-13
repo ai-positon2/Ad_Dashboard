@@ -147,3 +147,9 @@ Hiccups / notes (2026-10-13)
   Services fell back to the sheet. Fixes: fail fast on a daily-quota 429 (no 30 s of retries), default cache window 12 h,
   cache stored on the Railway volume when one is attached (`RAILWAY_VOLUME_MOUNT_PATH`) so redeploys reuse it.
   Rule of thumb: avoid redeploy bursts; attach a small volume to each API service.
+
+## GD (2026-10-13)
+New API-only client `gd` (Railway `CLIENT=GD`): the 6 dental practices below, matched by account NAME under the main MCC
+(`account_names` in clients.json; near-misses and unmatched names are logged, never dropped silently):
+Gentle Dental, Great Hill Dental, Dynamic Dental, Great Lakes Family Dental, Southern Connecticut Dental Group, Dental Care Associates.
+- [ ] First build once the API quota resets (~07:00 UTC 2026-10-14); then confirm all 6 accounts matched.

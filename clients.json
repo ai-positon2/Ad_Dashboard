@@ -36,5 +36,21 @@
     "customer_ids": [
       "9557969390"
     ]
+  },
+  "gd": {
+    "name": "GD",
+    "domain": "",
+    "account_prefix": "",
+    "source": "api",
+    "login_customer_id": "9923720096",
+    "mcc_id": "9923720096",
+    "account_names": [
+      "Gentle Dental",
+      "Great Hill Dental",
+      "Dynamic Dental",
+      "Great Lakes Family Dental",
+      "Southern Connecticut Dental Group",
+      "Dental Care Associates"
+    ]
   }
 }

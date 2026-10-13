@@ -177,6 +177,30 @@ def list_accounts(api, mcc_id):
             for r in rows]
 
 
+def _norm(name):
+    return re.sub(r"[^a-z0-9]", "", re.sub(r"\(\d{6,}\)", "", str(name).lower()))
+
+
+def pick_accounts(accounts, ids=(), names=()):
+    """Narrow an MCC's accounts to the ones a client wants: by customer id and/or by account name.
+    Names match ignoring case, punctuation and a trailing "(customer id)"; if no exact match, a single account whose
+    name starts with / contains the wanted name is used. Returns (accounts, notes) so misses are never silent."""
+    only = {re.sub(r"\D", "", x) for x in ids}
+    picked, notes = [a for a in accounts if a["id"] in only], []
+    for want in names:
+        w = _norm(want)
+        exact = [a for a in accounts if _norm(a["name"]) == w]
+        loose = [a for a in accounts if w and (_norm(a["name"]).startswith(w) or w in _norm(a["name"]))]
+        hit = exact or (loose if len(loose) == 1 else [])
+        if not hit:
+            notes.append(f'account "{want}" not found under the MCC' +
+                         (f': {len(loose)} similar ({", ".join(a["name"] for a in loose[:4])})' if loose else ""))
+        elif not exact:
+            notes.append(f'account "{want}" matched "{hit[0]["name"]}"')
+        picked += [a for a in hit if a not in picked]
+    return picked, notes
+
+
 # ---------------------------------------------------------------- asset lookup
 def load_assets(api, cid, names, log):
     """resource name -> {type, text, url, video, cta, lines}. Only the referenced assets are fetched."""
@@ -625,9 +649,11 @@ def pull(client):
     api = Api(client.get("login_customer_id", ""))  # the manager account the OAuth user signs in through
     mcc = client.get("mcc_id") or api.login          # the MCC whose client accounts we list
     accounts = list_accounts(api, mcc)
-    only = {re.sub(r"\D", "", x) for x in client.get("customer_ids", [])}
-    if only:
-        accounts = [a for a in accounts if a["id"] in only]
+    notes = []
+    if client.get("customer_ids") or client.get("account_names"):
+        accounts, notes = pick_accounts(accounts, client.get("customer_ids", []), client.get("account_names", []))
+    for n in notes:
+        print("  !", n)
     if not accounts:
         raise RuntimeError(f"No enabled accounts found under MCC {mcc}")
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -641,6 +667,7 @@ def pull(client):
             out[k] += r[k]
         for k in ("ad", "ag", "themes"):
             out["strengths"][k].update(r["strengths"][k])
+    out["log"] = notes + out["log"]
     out["requests"] = api.requests
     print(f"Google Ads API: {len(accounts)} accounts, {api.requests} requests, {time.time() - t0:.0f}s")
     for m in out["log"]:
