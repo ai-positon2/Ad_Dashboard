@@ -23,6 +23,8 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 
+import gads_api
+
 ROOT = Path(__file__).parent
 CLIENTS = json.loads((ROOT / "clients.json").read_text(encoding="utf-8"))
 CLIENT_KEY = (sys.argv[1] if __name__ == "__main__" and len(sys.argv) > 1 else os.environ.get("CLIENT", "tealium")).lower()
@@ -478,11 +480,51 @@ def build_performance(tab):
     return out
 
 
-def main():
+STRENGTH_LABELS = {"EXCELLENT": "Excellent", "GOOD": "Good", "AVERAGE": "Average", "POOR": "Poor",
+                   "PENDING": "Pending", "NO_ADS": "Incomplete", "UNKNOWN": "Incomplete"}  # API enum -> the labels the sheet used
+
+
+def apply_api_strengths(ads, st):
+    """Ad strength and PMax search themes straight from the API (they used to come from Supermetrics)."""
+    for a in ads:
+        pmax = a["kind"] == "PMAX"
+        s = (st["ag"] if pmax else st["ad"]).get(a["id"])
+        if s in STRENGTH_LABELS:
+            a["strength"] = STRENGTH_LABELS[s]
+        if pmax and st["themes"].get(a["id"]):
+            a["themes"] = st["themes"][a["id"]]
+
+
+def load_tables():
+    """-> (tabs by name, API pull or None). `source: api` clients read Google Ads directly (cached); the sheet
+    is then only needed for the hand-made URLS preview-link tab. Falls back to the sheet if the API isn't usable."""
     url = f"https://docs.google.com/spreadsheets/d/{CLIENT['sheet_id']}/export?format=xlsx"
+    api_data = None
+    if CLIENT.get("source") == "api":
+        if not gads_api.available():
+            print("! source is 'api' but no Google Ads API credentials are set; falling back to the sheet")
+        else:
+            try:
+                api_data = gads_api.load_or_pull(CLIENT_KEY, CLIENT)
+            except Exception as e:
+                print(f"! Google Ads API failed ({e}); falling back to the sheet")
     print("Downloading sheet...")
-    data, _ = fetch(url)
-    x = pd.read_excel(io.BytesIO(data), sheet_name=None, dtype=str)
+    try:
+        data, _ = fetch(url)
+        x = pd.read_excel(io.BytesIO(data), sheet_name=None, dtype=str)
+    except Exception as e:
+        if api_data is None:
+            raise
+        print(f"! sheet download failed ({e}); building without preview links")
+        x = {}
+    if api_data is not None:
+        keep = {k: v for k, v in x.items() if k.strip().lower() in ("urls", "preview links")}
+        x = {**keep, **gads_api.frames(api_data)}
+    return x, api_data
+
+
+def main():
+    x, api_data = load_tables()
     rc, pc = tab(x, "RSA Combinations"), tab(x, "PMax Combinations")
     for name, df in (("RSA Combinations", rc), ("PMax Combinations", pc)):
         if df is None:
@@ -503,6 +545,8 @@ def main():
     if live:
         ads = apply_live(ads, live, rsa_sheet, assets)
     fill_strengths(ads, rsa_sheet, pmax_sheet)
+    if api_data:
+        apply_api_strengths(ads, api_data["strengths"])
     for a in ads:  # client asked to show Google's "Pending" ad strength as Average
         if a.get("strength", "").lower() == "pending":
             a["strength"] = "Average"
@@ -510,7 +554,7 @@ def main():
 
     first = lambda df, col: clean(df[col].dropna().iloc[0]) if df is not None and col in df and df[col].notna().any() else ""
     payload = {
-        "client": CLIENT["name"], "domain": CLIENT["domain"],
+        "client": CLIENT["name"], "domain": CLIENT["domain"], "source": "api" if api_data else "sheet",
         "dateRange": first(rc, "Date range").replace("_", " ").title(),
         "exportedAt": first(rc, "Exported at") or first(pc, "Exported at"),
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),

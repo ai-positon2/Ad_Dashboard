@@ -9,7 +9,10 @@
     "name": "OIA",
     "sheet_id": "1V_6OsdBZGJRclrSr_WSEfOcnex5Q3vd2anLpllsO7Cc",
     "domain": "",
-    "account_prefix": ""
+    "account_prefix": "",
+    "source": "api",
+    "login_customer_id": "9923720096",
+    "mcc_id": "5717638537"
   },
   "mchale": {
     "name": "McHale Landscaping",

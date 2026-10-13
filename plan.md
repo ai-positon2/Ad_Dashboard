@@ -110,3 +110,28 @@ One codebase, one Google Sheet + one Railway service per client. Rollout one cli
 - [x] Added to `clients.json` (key `mchale`, sheet 1bUPZFes-tXHULtpCW0Ww0YrFQ0LRWnKoxFLRXlG_c5w). Local build OK:
       6 RSA, 4 PMax, 6 DG, all with ad strength; 4 preview links matched; 12 campaigns.
 - [ ] Railway service with `CLIENT=mchale`.
+
+## Google Ads API source — OIA pilot (2026-10-13)
+Replace the Google Ads Scripts + Supermetrics tabs with direct Google Ads API reads (dev token + OAuth,
+Explorer access, MCC 9923720096). Pilot on OIA; once proven, move Tealium and McHale.
+Design: `gads_api.py` builds DataFrames with the SAME columns as the sheet tabs (RSA Combinations, PMax
+Combinations, Live Assets, Campaign Performance, plus ad strength / search themes in place of the Supermetrics
+tabs), so `build.py` and the dashboard stay unchanged. `clients.json` gets `"source": "api"` + `"customer_ids"` /
+`"mcc_id"`. The manual `URLS` preview-link tab still comes from the sheet. If API credentials are missing the
+build falls back to the sheet. Credentials: env vars (`GADS_CLIENT_ID/SECRET`, `GADS_DEVELOPER_TOKEN`,
+`GADS_REFRESH_TOKEN`, `GADS_LOGIN_CUSTOMER_ID`) or `~/.gads_creds.json` locally; never committed.
+- [x] **1. Discover OIA accounts** under the OIA MCC (13, matches the sheet); every query type works at Explorer access.
+- [x] **2. `gads_api.py`**: combinations, live assets, performance, ad strength/search themes. ~22 requests per account (275 for OIA, 76s).
+- [x] **3. Wire into `build.py`** (`source: api`), sheet fallback; OIA diffed against the sheet-based build: same 310 RSA + 79 PMax ads, identical headlines/descriptions/URLs/paths, ad strength now filled for all (110 were blank). Demand Gen verified on McHale.
+- [ ] **4. Deploy**: Railway env vars for the OIA service, commit/push, watch the first hourly rebuild.
+- [ ] **5. Roll out** to Tealium and McHale (one at a time).
+Hiccups are logged below.
+
+Hiccups / notes (2026-10-13)
+- Explorer access = ~2,880 operations/day and one search request = one operation. A full OIA pull is ~275, so
+  pulls are cached on disk for `GADS_CACHE_HOURS` (default 6) and the hourly rebuild just reuses the cache.
+- Google answered one query with HTTP 502; retries now cover 429/500/502/503/504 (a silent miss dropped one account's RSA assets before this).
+- Ad strength: API `UNKNOWN` = the sheet's "Incomplete" (PMax); `PENDING` still shows as Average (client request).
+- If the OAuth consent screen is External + Testing, Google expires refresh tokens after 7 days; the build then
+  falls back to the last cache / the sheet and logs the error.
+- The sheet is still read for the hand-made URLS preview-link tab. The 3 Ads Scripts can stay running until the API is trusted.
