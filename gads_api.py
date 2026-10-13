@@ -9,7 +9,7 @@ Credentials come from env vars (Railway) or ~/.gads_creds.json (local); never co
     GADS_CLIENT_ID  GADS_CLIENT_SECRET  GADS_DEVELOPER_TOKEN  GADS_REFRESH_TOKEN  GADS_LOGIN_CUSTOMER_ID
 
 Explorer access allows ~2,880 operations a day (one search request = one operation), so a full pull is
-cached on disk (GADS_CACHE_HOURS, default 6) and shared by every rebuild in that window.
+cached on disk (GADS_CACHE_HOURS, default 12) and shared by every rebuild in that window.
 """
 import json
 import os
@@ -33,8 +33,10 @@ MAX_PMAX_COMBOS = 20
 ASSET_BATCH = 400
 WORKERS = 4  # accounts pulled in parallel; kept low to stay well inside Google's rate limits
 ROOT = Path(__file__).parent
-CACHE_DIR = Path(os.environ.get("GADS_CACHE_DIR", ROOT / "cache"))
-CACHE_HOURS = float(os.environ.get("GADS_CACHE_HOURS", "6"))
+# Keep the cache on a Railway volume when one is attached, so a redeploy doesn't throw it away and re-spend the quota.
+_VOLUME = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+CACHE_DIR = Path(os.environ.get("GADS_CACHE_DIR") or (Path(_VOLUME) / "gads_cache" if _VOLUME else ROOT / "cache"))
+CACHE_HOURS = float(os.environ.get("GADS_CACHE_HOURS", "12"))
 CACHE_VERSION = 2  # bump when the pulled data gains a field, so older caches are discarded instead of reused
 MIN_REFRESH_MINUTES = float(os.environ.get("GADS_MIN_REFRESH_MINUTES", "10"))  # floor between manual refreshes
 FORCE = threading.Event()  # set by the dashboard's "Refresh" link: pull again even inside the cache window
@@ -118,6 +120,10 @@ class Api:
                 return json.load(urllib.request.urlopen(req, timeout=120))
             except urllib.error.HTTPError as e:
                 text = e.read().decode("utf-8", "replace")
+                if e.code == 429:
+                    wait = re.search(r"[Rr]etry in (\d+) seconds", text)
+                    if wait and int(wait.group(1)) > 120:  # daily quota used up: waiting won't help, fail fast
+                        raise ApiError(429, text) from None
                 if e.code in (429, 500, 502, 503, 504) and attempt < 4:
                     time.sleep(2 ** attempt * 2)
                     continue
