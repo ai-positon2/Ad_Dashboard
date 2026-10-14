@@ -153,3 +153,8 @@ New API-only client `gd` (Railway `CLIENT=GD`): the 6 dental practices below, ma
 (`account_names` in clients.json; near-misses and unmatched names are logged, never dropped silently):
 Gentle Dental, Great Hill Dental, Dynamic Dental, Great Lakes Family Dental, Southern Connecticut Dental Group, Dental Care Associates.
 - [ ] First build once the API quota resets (~07:00 UTC 2026-10-14); then confirm all 6 accounts matched.
+- [x] GD first build (2026-10-14): 6 accounts pulled. Great Lakes is named just "Great Lakes" in the MCC (added by ID 9925296449).
+      Ads live in 4 of them (Gentle 224 RSA/234 PMax/36 DG, Great Hill 163/30, Dynamic 17/1, Southern CT 8/2); Great Lakes and
+      Dental Care Associates have only paused campaigns, so they show no ads. All 267 PMax groups got Google preview links.
+- Fixes found by GD: preview-link requests are capped at 10 asset groups; a pull cut short by the quota (or empty) is now discarded
+  instead of cached, and an empty cache is ignored.

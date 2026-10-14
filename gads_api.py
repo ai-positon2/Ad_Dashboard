@@ -86,6 +86,7 @@ class Api:
             raise RuntimeError("Google Ads API credentials not set (GADS_* env vars or ~/.gads_creds.json)")
         self.login = re.sub(r"\D", "", login_customer_id or self.c.get("login_customer_id", ""))
         self.token, self.token_at, self.lock, self.requests = "", 0.0, threading.Lock(), 0
+        self.quota_hit = False  # set when Google says the daily quota is used up
 
     def _access_token(self):
         with self.lock:
@@ -123,6 +124,7 @@ class Api:
                 if e.code == 429:
                     wait = re.search(r"[Rr]etry in (\d+) seconds", text)
                     if wait and int(wait.group(1)) > 120:  # daily quota used up: waiting won't help, fail fast
+                        self.quota_hit = True
                         raise ApiError(429, text) from None
                 if e.code in (429, 500, 502, 503, 504) and attempt < 4:
                     time.sleep(2 ** attempt * 2)
@@ -612,8 +614,8 @@ def previews(api, acct, groups, now, log):
     """Google's own shareable preview link for each PMax asset group. Google supports no other ad type
     here (Demand Gen / RSA return UNSUPPORTED_AD_TYPE). Links last 14 days; every pull makes fresh ones."""
     out, ids = [], sorted(groups)
-    for i in range(0, len(ids), 50):
-        batch = ids[i:i + 50]
+    for i in range(0, len(ids), 10):  # Google allows at most 10 asset groups per request
+        batch = ids[i:i + 10]
         try:
             r = api._post(acct["id"], {"shareablePreviews": [{"assetGroupIdentifier": {"assetGroupId": x}} for x in batch]},
                           ":generateShareablePreviews", PREVIEW_API)
@@ -667,6 +669,10 @@ def pull(client):
             out[k] += r[k]
         for k in ("ad", "ag", "themes"):
             out["strengths"][k].update(r["strengths"][k])
+    if api.quota_hit:  # the per-query guards swallow errors, so a cut-short pull would otherwise look like a good one
+        raise RuntimeError("Google Ads API daily quota ran out during the pull; discarding the partial data")
+    if not (out["rsa"] or out["pmax"] or out["live"]):
+        raise RuntimeError("Google Ads API returned no ads for these accounts; not using an empty result")
     out["log"] = notes + out["log"]
     out["requests"] = api.requests
     print(f"Google Ads API: {len(accounts)} accounts, {api.requests} requests, {time.time() - t0:.0f}s")
@@ -685,6 +691,9 @@ def load_or_pull(key, client):
             cached = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             cached = None
+    if cached and not (cached.get("rsa") or cached.get("pmax") or cached.get("live")):
+        print("Google Ads API: ignoring an empty cache")
+        cached = None
     if cached and cached.get("version") != CACHE_VERSION:
         print("Google Ads API: cache is from an older version, pulling fresh data")
         cached = None
