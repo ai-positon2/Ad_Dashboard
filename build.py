@@ -424,6 +424,49 @@ def account_logos(ads, live):
     return logos
 
 
+def account_businesses(ads, live):
+    """Each account's business name, always taken from that account itself (never the client's name):
+    the account-level BUSINESS_NAME asset, else the name its campaigns/ads use most, else the account name."""
+    votes = defaultdict(lambda: defaultdict(int))
+    for a in ads:
+        names = [(a.get("ext") or {}).get("business"), a.get("business")]
+        names += [p.get("x") for c in a["combos"] for p in c["parts"] if p["f"] == "BUSINESS_NAME"]
+        for n in names:
+            if n:
+                votes[a["account"]][n] += 1
+    if live:
+        for (acct, level, _, _), types in live["ext"].items():
+            for n in types.get("BUSINESS_NAME", []):
+                votes[acct][n] += 1000 if level == "ACCOUNT" else 1
+    out = {}
+    for acct in sorted({a["account"] for a in ads}):
+        v = votes.get(acct)
+        out[acct] = max(v, key=v.get) if v else (CLIENT.get("business_name") or acct)
+    return out
+
+
+def check_brand_isolation(ads, logos, businesses):
+    """A preview must only ever show its own account's logo and business name. Warn loudly if the data says otherwise."""
+    own = defaultdict(set)
+    for a in ads:
+        for img in [(a.get("ext") or {}).get("logo")] + list(a.get("logos") or []) + [
+                p.get("img") for c in a["combos"] for p in c["parts"] if p["f"] in ("BUSINESS_LOGO", "LOGO")]:
+            if img:
+                own[a["account"]].add(img)
+    for acct in sorted({a["account"] for a in ads}):
+        if not logos.get(acct) and not own.get(acct):
+            print(f"  ! WARNING {acct}: no logo found; its previews will show a globe")
+        if not businesses.get(acct):
+            print(f"  ! WARNING {acct}: no business name found")
+    users = defaultdict(set)
+    for acct, imgs in own.items():
+        for img in imgs:
+            users[img].add(acct)
+    for img, accts in users.items():
+        if len(accts) > 1:
+            print(f"  ! WARNING one logo ({img}) is used by several accounts: {', '.join(sorted(accts))}")
+
+
 # ------------------------------------------------------------ preview links
 PREVIEW_DAYS = 30  # the team creates shared preview links with the 30-day expiry option
 
@@ -564,6 +607,10 @@ def main():
         if a.get("strength", "").lower() == "pending":
             a["strength"] = "Average"
     logos = account_logos(ads, live)
+    businesses = account_businesses(ads, live)
+    check_brand_isolation(ads, logos, businesses)
+    for acct, name in businesses.items():  # one line per account so a missing name or logo is visible in the build log
+        print(f"  {acct}: business name '{name}', logo {'yes' if logos.get(acct) else 'NO'}")
 
     first = lambda df, col: clean(df[col].dropna().iloc[0]) if df is not None and col in df and df[col].notna().any() else ""
     payload = {
@@ -573,6 +620,7 @@ def main():
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "ads": ads,
         "logos": logos,
+        "businesses": businesses,
         "previewLinks": merge_preview_links(build_preview_links(tab(x, "URLS", "Preview Links")), api_data),
         "liveAssets": bool(live),
         "liveExportedAt": first(live_tab, "Exported at") if live else "",

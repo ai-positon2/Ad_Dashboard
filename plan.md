@@ -158,3 +158,12 @@ Gentle Dental, Great Hill Dental, Dynamic Dental, Great Lakes Family Dental, Sou
       Dental Care Associates have only paused campaigns, so they show no ads. All 267 PMax groups got Google preview links.
 - Fixes found by GD: preview-link requests are capped at 10 asset groups; a pull cut short by the quota (or empty) is now discarded
   instead of cached, and an empty cache is ignored.
+
+## Per-account brand rule (2026-10-14) - must hold for every dashboard
+A preview shows ONLY its own account's business name and logo. Never the client/dashboard name, never another account's logo.
+- Business name: served BUSINESS_NAME asset -> that ad's own name -> the account's own name (account-level asset, else the name its
+  ads/campaigns use most, else the account name; per-client `business_name` override only for single-brand clients like Tealium).
+  Served `UNKNOWN` text parts are NOT business names (they are other assets, e.g. headline variants).
+- Logo: served logo -> ad/account-level logo -> that account's logo -> globe. The old "first logo of any account" fallback is gone.
+- Build prints one line per account and warns if a name/logo is missing or one logo is shared by several accounts.
+- Dashboard title comes from `name` in clients.json (GD = "42 North Dental").
