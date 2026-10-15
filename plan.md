@@ -175,3 +175,9 @@ Built locally: 318+23 RSA, 123 PMax (all with Google preview links), 7 DG across
 - Images: Google serves some PNGs with private metadata chunks that Pillow rejects (looked like a missing logo for Garramone). Build now retries,
   strips non-pixel PNG chunks, and as a last resort keeps the original file.
 - EPSTEIN also runs a second business name ("Foundation Hair") on some campaigns; it is that account's own asset so it is shown as-is.
+
+## Burnout Brands (2026-10-15)
+API-only client `burnout` (Railway `CLIENT=burnout`), 4 accounts pinned by ID: Monster Transmission (2680354698), 1369614 B.C. LTD. (BD Engine Brake)
+(8577930930, CAD; shown as "BD Engine Brake" via account_aliases), D&J Precision Machine LLC (6438492741), Brian Tooley Racing (2016774320).
+Built locally: 30 RSA, 33 PMax (all with Google preview links), 6 DG; brand rule verified (own name/logo only, nothing shared); no image failures.
+- BD Engine Brake's own business-name asset is "BD Diesel"; Monster Transmission has "Monster Transmission(s)" variants. Shown as set in Google Ads.

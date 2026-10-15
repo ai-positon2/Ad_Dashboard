@@ -76,5 +76,22 @@
     "account_aliases": {
       "Daniel I. Shapiro, M.D., P.C.": "Shapiro Plastic Surgery"
     }
+  },
+  "burnout": {
+    "name": "Burnout Brands",
+    "domain": "",
+    "account_prefix": "",
+    "source": "api",
+    "login_customer_id": "9923720096",
+    "mcc_id": "9923720096",
+    "customer_ids": [
+      "2680354698",
+      "8577930930",
+      "6438492741",
+      "2016774320"
+    ],
+    "account_aliases": {
+      "1369614 B.C. LTD. (BD Engine Brake)": "BD Engine Brake"
+    }
   }
 }
