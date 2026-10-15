@@ -167,3 +167,11 @@ A preview shows ONLY its own account's business name and logo. Never the client/
 - Logo: served logo -> ad/account-level logo -> that account's logo -> globe. The old "first logo of any account" fallback is gone.
 - Build prints one line per account and warns if a name/logo is missing or one logo is shared by several accounts.
 - Dashboard title comes from `name` in clients.json (GD = "42 North Dental").
+
+## Inspire Aesthetics (2026-10-15)
+API-only client `inspire` (Railway `CLIENT=inspire`), 8 accounts pinned by customer ID (+ `account_aliases` so Daniel I. Shapiro, M.D., P.C. shows as
+"Shapiro Plastic Surgery"): Inspire Aesthetics, Millard, Marietta, Shapiro, Southern Coastal, Plastic Surgery Center of Hampton Roads, EPSTEIN, Garramone.
+Built locally: 318+23 RSA, 123 PMax (all with Google preview links), 7 DG across all 8 accounts. Brand rule verified (own name/logo only, no shared logos).
+- Images: Google serves some PNGs with private metadata chunks that Pillow rejects (looked like a missing logo for Garramone). Build now retries,
+  strips non-pixel PNG chunks, and as a last resort keeps the original file.
+- EPSTEIN also runs a second business name ("Foundation Hair") on some campaigns; it is that account's own asset so it is shown as-is.

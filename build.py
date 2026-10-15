@@ -14,6 +14,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -53,7 +54,8 @@ def cols(row, prefix, n):
 
 def short_account(name):
     prefix = CLIENT.get("account_prefix", "")
-    return (name[len(prefix):] if prefix and name.startswith(prefix) else name).strip()
+    short = (name[len(prefix):] if prefix and name.startswith(prefix) else name).strip()
+    return CLIENT.get("account_aliases", {}).get(short, short)  # display name for accounts Google names differently
 
 
 def tab(x, *names):
@@ -94,6 +96,21 @@ def shrink(data):
     return out.getvalue()
 
 
+def strip_png_metadata(data):
+    """Some Google-hosted PNGs carry private/odd metadata chunks (e.g. 'izXt') that Pillow refuses; keep only the pixel chunks."""
+    import struct
+    keep, out, p = {b"IHDR", b"PLTE", b"IDAT", b"IEND", b"tRNS"}, [data[:8]], 8
+    while p + 8 <= len(data):
+        n, t = struct.unpack(">I4s", data[p:p + 8])
+        if t in keep:
+            out.append(data[p:p + 12 + n])
+        p += 12 + n
+    return b"".join(out)
+
+
+RAW_TYPES = ((bytes.fromhex("89504e47"), "png"), (bytes.fromhex("ffd8"), "jpg"), (b"GIF8", "gif"), (b"RIFF", "webp"))
+
+
 class Assets:
     """Downloads remote images once (resized to preview size), returns the local published path."""
 
@@ -110,14 +127,34 @@ class Assets:
         key = hashlib.sha1(url.encode()).hexdigest()[:16]
         target = self.dir / f"{key}.webp"
         old = next((f for f in self.dir.glob(f"{key}.*") if f != target), None)  # pre-resize cache file (left in place)
-        try:
-            if not target.exists():
-                data = old.read_bytes() if old else fetch(url)[0]
-                target.write_bytes(shrink(data))
-            path = f"assets/{target.name}"
-        except Exception as e:  # keep building; the preview shows a placeholder
-            print(f"  ! image failed {url}: {e}")
-            path = ""
+        path = ""
+        for attempt in range(4):  # Google's image server throttles bursts and answers with non-images; retry politely
+            try:
+                raw_files = [f for f in self.dir.glob(f"{key}.*") if f.suffix != ".webp"]
+                if not target.exists() and raw_files:  # an earlier build kept the original (Pillow could not read it)
+                    path = f"assets/{raw_files[0].name}"
+                    break
+                if not target.exists():
+                    data = old.read_bytes() if old else fetch(url)[0]
+                    try:
+                        target.write_bytes(shrink(data))
+                    except Exception:
+                        try:
+                            target.write_bytes(shrink(strip_png_metadata(data)))
+                        except Exception:  # still unreadable to Pillow: keep the original file, browsers display it fine
+                            ext = next((e for sig, e in RAW_TYPES if data.startswith(sig)), None)
+                            if not ext:
+                                raise
+                            (self.dir / f"{key}.{ext}").write_bytes(data)
+                            path = f"assets/{key}.{ext}"
+                            break
+                path = f"assets/{target.name}"
+                break
+            except Exception as e:
+                if attempt == 3:  # keep building; the preview shows a placeholder
+                    print(f"  ! image failed {url}: {e}")
+                else:
+                    time.sleep(1.5 * (attempt + 1))
         self.cache[url] = path
         return path
 

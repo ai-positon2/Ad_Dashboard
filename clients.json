@@ -55,5 +55,26 @@
     "customer_ids": [
       "9925296449"
     ]
+  },
+  "inspire": {
+    "name": "Inspire Aesthetics",
+    "domain": "",
+    "account_prefix": "",
+    "source": "api",
+    "login_customer_id": "9923720096",
+    "mcc_id": "9923720096",
+    "customer_ids": [
+      "1887900641",
+      "4092701899",
+      "6374556990",
+      "7395576762",
+      "2048733325",
+      "1105892184",
+      "1300586568",
+      "1472407899"
+    ],
+    "account_aliases": {
+      "Daniel I. Shapiro, M.D., P.C.": "Shapiro Plastic Surgery"
+    }
   }
 }
