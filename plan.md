@@ -181,3 +181,12 @@ API-only client `burnout` (Railway `CLIENT=burnout`), 4 accounts pinned by ID: M
 (8577930930, CAD; shown as "BD Engine Brake" via account_aliases), D&J Precision Machine LLC (6438492741), Brian Tooley Racing (2016774320).
 Built locally: 30 RSA, 33 PMax (all with Google preview links), 6 DG; brand rule verified (own name/logo only, nothing shared); no image failures.
 - BD Engine Brake's own business-name asset is "BD Diesel"; Monster Transmission has "Monster Transmission(s)" variants. Shown as set in Google Ads.
+
+## Comments not visible for the client (2026-10-19)
+Gwen (Tealium) could not see the comment box while the team could. Server was fine (`/api/comments` answers). Root cause in the page: one failed
+`GET api/comments` set `cm.on=false` for the whole session and removed the box silently, so anything that blocks that single request
+(ad blocker / company filter / network hiccup) made the feature vanish with no message.
+- Page now tries two endpoint names (`api/notes`, `api/comments`; some filters block URLs containing "comment"), retries up to 3 times, and if it
+  still fails shows "Comments couldn't load on this connection (reason)" with a "Try again" button. A 404 from both (comments truly off) still hides quietly.
+- Off from the start on claude.ai / non-http pages (the box has never existed there).
+- Server also answers `/api/notes` (alias of `/api/comments`; same data, notifier path unchanged).

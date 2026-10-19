@@ -558,10 +558,14 @@ function assetsPanel(ad){
 }
 
 /* Comments: served by main.py when the service has COMMENTS=on; anywhere else the box never appears. */
-const cm={on:null,byAd:{},draft:{}};
+const cm={on:null,byAd:{},draft:{},err:{}};
+/* Comments only exist on the Railway server. Everywhere else (claude.ai artifact, local file) the box is off from the start. */
+if(!/^https?:$/.test(location.protocol)||/claude/.test(location.hostname))cm.on=false;
+const CAPI=["api/notes","api/comments"]; /* same endpoint under two names: some ad blockers filter URLs containing "comment" */
 function whenText(iso){const d=new Date(iso);return isNaN(d)?iso:d.toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
 function commentBox(ad){
   if(cm.on===false)return "";
+  if(cm.err[ad.id])return `<section class="aset cbox" id="cbox">${commentError(ad)}</section>`;
   const list=cm.byAd[ad.id];
   if(!list)return `<section class="aset cbox" id="cbox" hidden></section>`;
   return `<section class="aset cbox" id="cbox">${commentInner(ad,list)}</section>`;
@@ -578,17 +582,33 @@ function commentInner(ad,list){
     ${list.length?`<ul class="clist">${list.map(c=>`<li><div class="chead"><b>${esc(c.name)}</b><span>${esc(whenText(c.at))}</span></div><p>${esc(c.text)}</p></li>`).join("")}</ul>`
       :`<p class="cnone">No comments yet.</p>`}`;
 }
+function commentError(ad){
+  return `<h3>Comments</h3><p class="cnone">Comments couldn't load on this connection (${esc(cm.err[ad.id])}). A browser extension or network filter may be blocking them.</p>
+    <div class="crow"><button type="button" class="cbtn" data-retry="${esc(ad.id)}">Try again</button></div>`;
+}
 function fillComments(ad){
   const box=$("#cbox");if(!box||state.sel!==ad.id)return;
   box.innerHTML=commentInner(ad,cm.byAd[ad.id]);box.hidden=false;
 }
-function loadComments(ad){
+function loadComments(ad,attempt=0){
   if(cm.on===false||cm.byAd[ad.id])return;
-  fetch("api/comments?ad="+encodeURIComponent(ad.id),{cache:"no-store"})
+  /* Try both endpoint names, with a couple of retries for flaky networks. A 404 from both means the server has comments
+     switched off, so the box disappears quietly. Any other failure is shown, never swallowed. */
+  fetch(CAPI[attempt%2]+"?ad="+encodeURIComponent(ad.id),{cache:"no-store"})
     .then(r=>r.ok?r.json():Promise.reject(r.status))
-    .then(j=>{cm.on=true;cm.byAd[ad.id]=j.comments||[];fillComments(ad)})
-    .catch(()=>{cm.on=false;const b=$("#cbox");if(b)b.remove()});
+    .then(j=>{cm.on=true;delete cm.err[ad.id];cm.byAd[ad.id]=j.comments||[];fillComments(ad)})
+    .catch(why=>{
+      if(why===404&&attempt>=1){cm.on=false;const b=$("#cbox");if(b)b.remove();return}
+      if(attempt<3){setTimeout(()=>loadComments(ad,attempt+1),600*(attempt+1));return}
+      cm.err[ad.id]=why===404?"not found":(typeof why==="number"?"HTTP "+why:"request blocked");
+      const b=$("#cbox");if(b&&state.sel===ad.id){b.innerHTML=commentError(ad);b.hidden=false}
+    });
 }
+$("#detail").addEventListener("click",e=>{
+  const r=e.target.closest("[data-retry]");if(!r)return;
+  const ad=ads.find(a=>a.id===r.dataset.retry);if(!ad)return;
+  delete cm.err[ad.id];const b=$("#cbox");if(b)b.hidden=true;loadComments(ad);
+});
 $("#detail").addEventListener("input",e=>{
   const f=e.target.closest(".cform");if(!f)return;
   if(e.target.name==="text")cm.draft[f.dataset.ad]=e.target.value;
@@ -602,7 +622,8 @@ $("#detail").addEventListener("submit",e=>{
   if(!name){stat.textContent="Add your name first.";f.elements.name.focus();return}
   if(!text){stat.textContent="Write a comment first.";f.elements.text.focus();return}
   btn.disabled=true;stat.textContent="Saving…";
-  fetch("api/comments",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ad:ad.id,name,text})})
+  const send=u=>fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ad:ad.id,name,text})});
+  send(CAPI[0]).catch(()=>send(CAPI[1])) /* first name blocked by a filter: try the other */
     .then(r=>r.json().then(j=>r.ok?j:Promise.reject(j.error||"Couldn't save the comment.")))
     .then(j=>{cm.byAd[ad.id]=j.comments||[];cm.draft[ad.id]="";fillComments(ad);const s=$("#cbox .cstat");if(s)s.textContent="Comment added."})
     .catch(err=>{btn.disabled=false;stat.textContent=typeof err==="string"?err:"Couldn't save the comment. Check your connection and try again."});

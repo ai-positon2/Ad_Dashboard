@@ -152,7 +152,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                       ".html": "text/html; charset=utf-8", ".json": "application/json; charset=utf-8",
                       ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8"}
 
+    def _alias_notes(self):
+        """Some ad blockers / company filters drop any URL containing "comment": the page also talks to /api/notes."""
+        if self.path.startswith("/api/notes"):
+            self.path = "/api/comments" + self.path[len("/api/notes"):]
+
     def do_GET(self):
+        self._alias_notes()
         if self.path == "/healthz":
             return self._send(200, f"ok last_build={status['last_ok']} error={status['last_error']}".encode(),
                               "text/plain")
@@ -181,6 +187,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        self._alias_notes()
         if self.path.startswith("/api/comments/delete"):  # admin clean-up, authenticated with NOTIFY_SECRET
             return self._delete_comments()
         if PASSWORD and not self._authorized():
