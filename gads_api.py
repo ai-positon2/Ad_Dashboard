@@ -698,7 +698,7 @@ def load_or_pull(key, client):
         print("Google Ads API: cache is from an older version, pulling fresh data")
         cached = None
     age = time.time() - cached.get("pulledTs", 0) if cached else None
-    forced = FORCE.is_set()
+    forced = FORCE.is_set() or os.environ.get("GADS_FORCE") == "1"  # env form: the multi-dashboard server builds in a subprocess
     FORCE.clear()
     if cached and age < (MIN_REFRESH_MINUTES * 60 if forced else CACHE_HOURS * 3600):
         why = f"{MIN_REFRESH_MINUTES:g} min refresh floor" if forced else f"{CACHE_HOURS:g}h window"

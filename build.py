@@ -32,7 +32,7 @@ CLIENT_KEY = (sys.argv[1] if __name__ == "__main__" and len(sys.argv) > 1 else o
 if CLIENT_KEY not in CLIENTS:
     raise SystemExit(f"Unknown client '{CLIENT_KEY}'. Known: {', '.join(CLIENTS)}")
 CLIENT = CLIENTS[CLIENT_KEY]
-DIST = ROOT / "dist" / CLIENT_KEY
+DIST = Path(os.environ.get("DIST_ROOT") or ROOT / "dist") / CLIENT_KEY  # DIST_ROOT: a persistent volume when one service hosts every dashboard
 MATCH_MIN = 0.6  # headline-set overlap needed to tie a sheet RSA row to a served ad
 
 

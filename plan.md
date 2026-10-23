@@ -194,3 +194,22 @@ Gwen (Tealium) could not see the comment box while the team could. Server was fi
   opens the old claude.ai artifact link, where comments cannot exist. Added: artifact/non-server pages now show "Comments are on the live dashboard: <live_url>"
   (clients.json `live_url`, set for Tealium), and the server logs one line per page load / comment lookup (`[page]` / `[comments]` + browser UA) so a
   report can be checked against what reached Railway.
+
+## One Railway service for every dashboard (2026-10-23)
+Today: one Railway service per client (7 boxes), same repo. Goal: ONE service, each dashboard at its own path
+(`<domain>/tealium`, `/oia`, `/mchale`, `/42north`, `/inspire`, `/burnout`, `/soteri`).
+Design
+- Opt-in with `MULTI=on` (default off, so the existing per-client services keep working untouched until switched).
+- Routing by first path segment = `slug` (clients.json, defaults to the key; GD uses `42north`). `/slug` redirects to `/slug/` so the page's
+  relative URLs (`assets/`, `api/...`) keep working. `/` and any unknown legacy path (`/api/comments/new`, `/assets/...`) go to the DEFAULT client
+  (`DEFAULT_CLIENT`, default tealium), so today's Tealium bookmark and the Apps Script comment notifier keep working.
+- Each client keeps its own state: comments (by client key), summary cache, status, password (`DASH_PASSWORD_<KEY>`, else `DASH_PASSWORD`).
+- Builds run one at a time as `python build.py <key>` subprocesses (no shared globals, no API-quota bursts). Output goes to `DIST_ROOT`
+  (the Railway volume when attached) so redeploys serve the last build immediately; a fresh dist is not rebuilt until it is `REBUILD_HOURS` old.
+- `/healthz` reports all sites; `/<slug>/healthz` one site. `/<slug>/api/rebuild` refreshes one client (GADS_FORCE for the API pull).
+Phases
+- [x] 1. build.py: `DIST_ROOT` env; gads_api: `GADS_FORCE` env. clients.json: `slug`.
+- [x] 2. main.py: Site class, routing, per-site state, subprocess builds, startup rule.
+- [x] 3. Local test (mchale + soteri): redirects, per-site pages/assets (cross-site asset = 404), comments isolation, per-site password, legacy root aliases + notifier, healthz, real subprocess builds, /api/rebuild. All passed.
+- [ ] 4. Push (per-client services unaffected), then switch ONE service (Ad_Dashboard, has the volume) to MULTI=on; verify every slug live.
+- [ ] 5. Delete the other six services; update the comment notifier URLs if used outside Tealium.
