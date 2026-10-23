@@ -91,6 +91,8 @@ class Site:
         """A build on disk (persistent volume) that is still fresh is served as is; otherwise build straight away."""
         page = self.dist / "index.html"
         self.next_build = page.stat().st_mtime + REBUILD_HOURS * 3600 if page.exists() else 0.0
+        if page.exists():  # served from the saved build, so /healthz shouldn't call it "building"
+            self.status["last_ok"] = datetime.fromtimestamp(page.stat().st_mtime).isoformat(timespec="seconds")
 
     def run_build(self):
         print(f"[{datetime.now():%Y-%m-%d %H:%M}] building {self.key}...", flush=True)
