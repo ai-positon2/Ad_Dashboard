@@ -159,6 +159,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         self._alias_notes()
+        if self.path in ("/", "/index.html") or (self.path.startswith("/api/comments") and not self.path.startswith("/api/comments/new")):
+            # one short line per page load / comment lookup, so a "the box isn't there" report can be checked against what reached the server
+            kind = "page" if self.path in ("/", "/index.html") else "comments"
+            print(f"[{kind}] {self.headers.get('User-Agent', '')[:100]}", flush=True)
         if self.path == "/healthz":
             return self._send(200, f"ok last_build={status['last_ok']} error={status['last_error']}".encode(),
                               "text/plain")

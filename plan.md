@@ -190,3 +190,7 @@ Gwen (Tealium) could not see the comment box while the team could. Server was fi
   still fails shows "Comments couldn't load on this connection (reason)" with a "Try again" button. A 404 from both (comments truly off) still hides quietly.
 - Off from the start on claude.ai / non-http pages (the box has never existed there).
 - Server also answers `/api/notes` (alias of `/api/comments`; same data, notifier path unchanged).
+- (2026-10-23) Gwen still saw no box after the 10-19 fix; a fresh Chrome on the live Railway page shows it fine ("Comments 1" + form). Most likely she
+  opens the old claude.ai artifact link, where comments cannot exist. Added: artifact/non-server pages now show "Comments are on the live dashboard: <live_url>"
+  (clients.json `live_url`, set for Tealium), and the server logs one line per page load / comment lookup (`[page]` / `[comments]` + browser UA) so a
+  report can be checked against what reached Railway.

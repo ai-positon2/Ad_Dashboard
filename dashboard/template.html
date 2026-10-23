@@ -560,11 +560,12 @@ function assetsPanel(ad){
 /* Comments: served by main.py when the service has COMMENTS=on; anywhere else the box never appears. */
 const cm={on:null,byAd:{},draft:{},err:{}};
 /* Comments only exist on the Railway server. Everywhere else (claude.ai artifact, local file) the box is off from the start. */
-if(!/^https?:$/.test(location.protocol)||/claude/.test(location.hostname))cm.on=false;
+if(!/^https?:$/.test(location.protocol)||/claude/.test(location.hostname)){cm.on=false;cm.pointer=!!DATA.liveUrl}
 const CAPI=["api/notes","api/comments"]; /* same endpoint under two names: some ad blockers filter URLs containing "comment" */
 function whenText(iso){const d=new Date(iso);return isNaN(d)?iso:d.toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}
 function commentBox(ad){
-  if(cm.on===false)return "";
+  /* Off the live server (claude.ai artifact, local file) there are no comments: say where they are instead of showing nothing. */
+  if(cm.on===false)return cm.pointer?`<section class="aset cbox" id="cbox"><h3>Comments</h3><p class="cnone">Comments are on the live dashboard: <a href="${esc(DATA.liveUrl)}" target="_blank" rel="noopener">${esc(DATA.liveUrl.replace(/^https?:\/\//,""))}</a></p></section>`:"";
   if(cm.err[ad.id])return `<section class="aset cbox" id="cbox">${commentError(ad)}</section>`;
   const list=cm.byAd[ad.id];
   if(!list)return `<section class="aset cbox" id="cbox" hidden></section>`;

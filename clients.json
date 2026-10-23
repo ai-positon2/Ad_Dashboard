@@ -4,7 +4,8 @@
     "sheet_id": "1lMWQI2RECyNgFqwHZ6r2gs0WhA3EsOvj2uha9Qwu-70",
     "domain": "tealium.com",
     "account_prefix": "Tealium - ENG - ",
-    "business_name": "Tealium"
+    "business_name": "Tealium",
+    "live_url": "https://addashboard-production.up.railway.app"
   },
   "oia": {
     "name": "OIA",

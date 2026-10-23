@@ -652,6 +652,7 @@ def main():
     first = lambda df, col: clean(df[col].dropna().iloc[0]) if df is not None and col in df and df[col].notna().any() else ""
     payload = {
         "client": CLIENT["name"], "domain": CLIENT["domain"], "source": "api" if api_data else "sheet",
+        "liveUrl": CLIENT.get("live_url", ""),
         "dateRange": first(rc, "Date range").replace("_", " ").title(),
         "exportedAt": first(rc, "Exported at") or first(pc, "Exported at"),
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
