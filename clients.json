@@ -5,7 +5,15 @@
     "domain": "tealium.com",
     "account_prefix": "Tealium - ENG - ",
     "business_name": "Tealium",
-    "live_url": "https://addashboard-production.up.railway.app"
+    "live_url": "https://tealiumads.up.railway.app/tealium/",
+    "source": "api",
+    "login_customer_id": "9923720096",
+    "mcc_id": "7835049660",
+    "customer_ids": [
+      "6690510760",
+      "9413684678",
+      "2281287878"
+    ]
   },
   "oia": {
     "name": "OIA",

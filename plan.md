@@ -213,3 +213,9 @@ Phases
 - [x] 3. Local test (mchale + soteri): redirects, per-site pages/assets (cross-site asset = 404), comments isolation, per-site password, legacy root aliases + notifier, healthz, real subprocess builds, /api/rebuild. All passed.
 - [ ] 4. Push (per-client services unaffected), then switch ONE service (Ad_Dashboard, has the volume) to MULTI=on; verify every slug live.
 - [ ] 5. Delete the other six services; update the comment notifier URLs if used outside Tealium.
+
+## Tealium moved to the Google Ads API (2026-10-23)
+`tealium`: source=api, MCC 7835049660, accounts 6690510760 (ANZ/ASIA), 9413684678 (EMEA), 2281287878 (NAM); `business_name` "Tealium" (one brand) kept.
+Compared with the sheet build: identical 136 ad ids (comments stay attached), identical copy/URLs/paths/images/logos/videos/extensions; only ad strength differs
+(live from Google; 17 ads that had none now have one). 68 hand-made preview links kept from the URLS tab, 3 PMax links now generated. `live_url` points at
+the hub (https://tealiumads.up.railway.app/tealium/). The sheet is still read for the URLS tab only. Label now reads "Refresh from Google Ads".
