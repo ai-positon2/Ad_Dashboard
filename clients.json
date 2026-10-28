@@ -5,7 +5,7 @@
     "domain": "tealium.com",
     "account_prefix": "Tealium - ENG - ",
     "business_name": "Tealium",
-    "live_url": "https://tealiumads.up.railway.app/tealium/",
+    "live_url": "https://adsdashboard.up.railway.app/tealium/",
     "source": "api",
     "login_customer_id": "9923720096",
     "mcc_id": "7835049660",

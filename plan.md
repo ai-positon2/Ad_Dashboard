@@ -218,4 +218,9 @@ Phases
 `tealium`: source=api, MCC 7835049660, accounts 6690510760 (ANZ/ASIA), 9413684678 (EMEA), 2281287878 (NAM); `business_name` "Tealium" (one brand) kept.
 Compared with the sheet build: identical 136 ad ids (comments stay attached), identical copy/URLs/paths/images/logos/videos/extensions; only ad strength differs
 (live from Google; 17 ads that had none now have one). 68 hand-made preview links kept from the URLS tab, 3 PMax links now generated. `live_url` points at
-the hub (https://tealiumads.up.railway.app/tealium/). The sheet is still read for the URLS tab only. Label now reads "Refresh from Google Ads".
+the hub (https://adsdashboard.up.railway.app/tealium/). The sheet is still read for the URLS tab only. Label now reads "Refresh from Google Ads".
+
+## Hub domain renamed (2026-10-28)
+The Ad_Dashboard service's Railway domain is now https://adsdashboard.up.railway.app (was tealiumads); every dashboard is at `/<slug>/`.
+`live_url` updated. The six per-client services (Burnout, Inspire, SoteriSkin, OIA, 42 North, Mchale) have no volume and comments off, so they
+hold nothing the hub lacks and can be deleted (phase 5 above). The live Apps Script comment notifier must point at the new domain if it used the old one.
