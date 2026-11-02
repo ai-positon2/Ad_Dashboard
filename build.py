@@ -654,7 +654,7 @@ def load_gpt(assets, forced, logo=""):
         print(f"! ChatGPT ads failed ({e})")
         return None, f"The ChatGPT ads could not be read: {e}"
     assets.prefetch([u for a in m["ads"] for u in a["images"]] + [m["account"]["icon"]])
-    ads = [dict(a, images=[x for x in (assets.get(u) for u in a["images"]) if x]) for a in m["ads"]]
+    ads = [dict(a, images=[assets.get(u) or u for u in a["images"]]) for a in m["ads"]]  # a picture that would not download is shown from OpenAI's link
     account = dict(m["account"], icon=assets.get(m["account"]["icon"]) if m["account"]["icon"] else logo)  # no icon from OpenAI: the client's own logo
     print(f"ChatGPT: {len(ads)} ads read {m['pulledAt']}")
     return {"account": account, "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""

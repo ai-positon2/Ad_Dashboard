@@ -18,7 +18,7 @@ import urllib.request
 import gads_api
 
 BASE = os.environ.get("OPENAI_ADS_API_BASE", "https://api.ads.openai.com/v1").rstrip("/")
-CACHE_VERSION = 1
+CACHE_VERSION = 2              # 2: pictures resolved from the ad itself, previews sent as JSON
 MAX_ADS = 400
 BIDDING = {"impressions": "Impressions (CPM)", "clicks": "Clicks (CPC)", "conversions": "Conversions (optimised CPC)"}
 REVIEW = {"approved": "Approved", "in_review": "In review", "rejected": "Rejected"}
@@ -48,8 +48,10 @@ class Api:
 
     def call(self, path, params=None, method="GET"):
         url = BASE + "/" + path.lstrip("/") + ("?" + urllib.parse.urlencode(params) if params else "")
-        req = urllib.request.Request(url, method=method, data=b"" if method == "POST" else None,
-                                     headers={"Authorization": "Bearer " + self.tok, "Accept": "application/json", "User-Agent": "ad-preview-dashboard"})
+        headers = {"Authorization": "Bearer " + self.tok, "Accept": "application/json", "User-Agent": "ad-preview-dashboard"}
+        if method == "POST":
+            headers["Content-Type"] = "application/json"                          # the API only takes JSON bodies
+        req = urllib.request.Request(url, method=method, data=b"{}" if method == "POST" else None, headers=headers)
         for attempt in range(4):
             with self.lock:
                 self.requests += 1
@@ -174,12 +176,14 @@ def pull(client):
                 if str(ad.get("status") or "").lower() == "archived" or len(out) >= MAX_ADS:
                     continue
                 cr = ad.get("creative") or {}
-                if cr.get("file_ids") and not cr.get("images"):                      # the list leaves several images unresolved; the ad itself has them
+                if (cr.get("file_ids") and not cr.get("images")) or (cr.get("file_id") and not cr.get("image_url")):  # the list can leave images unresolved; the ad itself has them
                     try:
                         cr = (api.call("ads/" + urllib.parse.quote(ad["id"])) or {}).get("creative") or cr
                     except RuntimeError as e:
                         log.append("The images of ad %s could not be read (%s)" % (ad["id"], str(e)[:120]))
                 p = creative_parts(cr)
+                if not p["images"] and p["format"] != "product" and not any("has no picture" in x for x in log):
+                    log.append("Ad %s has no picture in the API answer (creative fields: %s)" % (ad["id"], ", ".join(sorted(cr)) or "none"))
                 out.append(dict(p, id=ad["id"], name=_txt(ad.get("name")), created=_day(ad.get("created_at")),
                                 status=status_of(camp, grp, ad), review=REVIEW.get(ad.get("review_status"), str(ad.get("review_status") or "")),
                                 campaign=_txt(camp.get("name")) or camp["id"], adset=_txt(grp.get("name")) or grp["id"],
