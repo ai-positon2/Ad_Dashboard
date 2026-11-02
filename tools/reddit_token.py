@@ -31,12 +31,17 @@ def main():
 
     class Handler(http.server.BaseHTTPRequestHandler):
         def do_GET(self):
-            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-            got.update({k: v[0] for k, v in q.items()})
+            q = {k: v[0] for k, v in urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query).items()}
+            fresh = q.get("state") == state                       # an answer to an older link (or a favicon request) is ignored
+            if fresh:
+                got.update(q)
+            elif q.get("code"):
+                print("Ignored an answer from an older link. Use the link printed above.")
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; charset=utf-8")
             self.end_headers()
-            self.wfile.write(b"Done. You can close this tab and go back to the terminal.")
+            self.wfile.write(b"Done. You can close this tab and go back to the terminal." if fresh else
+                             b"This came from an older link. Go back to the terminal and open the newest link it printed.")
 
         def log_message(self, *a):
             pass

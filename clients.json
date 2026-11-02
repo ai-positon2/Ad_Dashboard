@@ -5,6 +5,7 @@
     "domain": "tealium.com",
     "meta_account_id": "996112131778889",
     "chatgpt_ads": true,
+    "reddit_ads": true,
     "account_prefix": "Tealium - ENG - ",
     "business_name": "Tealium",
     "live_url": "https://adsdashboard.up.railway.app/tealium/",

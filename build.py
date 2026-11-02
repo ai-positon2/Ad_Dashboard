@@ -27,6 +27,7 @@ from PIL import Image
 import gads_api
 import gpt_api
 import meta_api
+import reddit_api
 
 ROOT = Path(__file__).parent
 CLIENTS = json.loads((ROOT / "clients.json").read_text(encoding="utf-8"))
@@ -660,6 +661,25 @@ def load_gpt(assets, forced, logo=""):
     return {"account": account, "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
 
 
+def load_reddit(assets, forced, logo=""):
+    """The client's Reddit ads for the Reddit view, pictures downloaded like Google's; (data, error). Not set up: (None, "")."""
+    if not reddit_api.enabled(CLIENT):
+        return None, ""
+    if reddit_api.missing():
+        return None, " and ".join(reddit_api.missing()) + " not set on this server, so the Reddit ads cannot be read."
+    try:
+        m = reddit_api.load_or_pull(CLIENT_KEY, CLIENT, forced=forced)
+    except Exception as e:
+        print(f"! Reddit ads failed ({e})")
+        return None, f"The Reddit ads could not be read: {e}"
+    assets.prefetch([u for a in m["ads"] for u in a["images"]])
+    local = lambda u: (assets.get(u) or u) if u else ""  # noqa: E731  a picture that would not download is shown from Reddit's link
+    ads = [dict(a, images=[local(u) for u in a["images"]], cards=[dict(c, image=local(c["image"])) for c in a["cards"]],
+                video=dict(a["video"], thumb=local(a["video"]["thumb"])) if a.get("video") else None) for a in m["ads"]]
+    print(f"Reddit: {len(ads)} ads read {m['pulledAt']}")
+    return {"account": dict(m["account"], icon=logo), "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
+
+
 def main():
     forced = gads_api.FORCE.is_set() or os.environ.get("GADS_FORCE") == "1"  # read before the Google pull clears it, so a Refresh reads Meta again too
     x, api_data = load_tables()
@@ -713,6 +733,7 @@ def main():
     logo = next((v for v in logos.values() if v), "")
     payload["meta"], payload["metaError"] = load_meta(assets, forced, logo=logo)
     payload["gpt"], payload["gptError"] = load_gpt(assets, forced, logo=logo)
+    payload["reddit"], payload["redditError"] = load_reddit(assets, forced, logo=logo)
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8").replace("__CLIENT__", CLIENT["name"])
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)

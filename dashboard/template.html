@@ -326,6 +326,38 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 .mf.st .scta{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:#fff;color:#111;border-radius:99px;padding:8px 18px;font-weight:600;font-size:14px;white-space:nowrap}
 .kind.GPT{background:#E6F4EF;color:#0B7A5A}
 .kind.off{background:var(--s-average-bg);color:var(--s-average)}
+.kind.RD{background:#FFE9E0;color:#C23A00}
+/* ---------- Reddit previews ---------- */
+.rc{--r-bg:#FFFFFF;--r-ink:#0F1A1C;--r-sub:#576F76;--r-line:#E5EBEE;--r-btn:#E5EBEE;--r-cta:#0A449B;--r-skel:#EEF1F3;
+  font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--r-bg);color:var(--r-ink);border-radius:16px;box-shadow:0 1px 3px rgb(0 0 0 / .16);width:100%;max-width:640px;padding:12px 16px 10px}
+.rc.mob{max-width:380px;border-radius:0;padding:10px 12px}
+:root[data-theme="dark"] .rc{--r-bg:#0E1113;--r-ink:#F2F4F5;--r-sub:#8BA2AD;--r-line:#2A3236;--r-btn:#2A3C42;--r-cta:#6A9BF4;--r-skel:#1A2226}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .rc{--r-bg:#0E1113;--r-ink:#F2F4F5;--r-sub:#8BA2AD;--r-line:#2A3236;--r-btn:#2A3C42;--r-cta:#6A9BF4;--r-skel:#1A2226}}
+.rc .rh{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--r-sub)}
+.rc .ri{width:24px;height:24px;border-radius:50%;overflow:hidden;background:#FF4500;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.rc .ri img{width:100%;height:100%;object-fit:cover;background:#fff}
+.rc .ru{font-weight:600;color:var(--r-ink)}
+.rc .rt{font-size:18px;font-weight:600;line-height:1.3;margin:8px 0 6px;color:var(--r-ink)}
+.rc.mob .rt{font-size:16px}
+.rc .rb{font-size:14px;line-height:1.45;color:var(--r-ink);margin-bottom:8px;white-space:pre-line}
+.rc .rm{display:block;border-radius:16px;overflow:hidden;border:1px solid var(--r-line);background:var(--r-skel);position:relative}
+.rc .rm img{display:block;width:100%;max-height:520px;object-fit:contain;margin:0 auto}
+.rc .rm .ph{padding:40px 12px;font-size:12px;text-align:center}
+.rc .rplay{position:absolute;inset:0;display:grid;place-items:center}
+.rc .rplay span{width:52px;height:52px;border-radius:50%;background:rgb(0 0 0 / .55);display:grid;place-items:center}
+.rc .rplay svg{width:22px;height:22px;fill:#fff;margin-left:3px}
+.rc .rcar{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin}
+.rc .rcard{flex:none;width:240px;border:1px solid var(--r-line);border-radius:12px;overflow:hidden;color:inherit;text-decoration:none}
+.rc.mob .rcard{width:200px}
+.rc .rcard img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--r-skel)}
+.rc .rcard div{padding:8px 10px;display:flex;align-items:center;gap:8px;font-size:12.5px}
+.rc .rcard b{flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc .rlink{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12.5px;color:var(--r-sub);text-decoration:none}
+.rc .rlink span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rc .rcta{background:var(--r-btn);color:var(--r-ink);border-radius:99px;padding:6px 14px;font-weight:600;font-size:12.5px;white-space:nowrap}
+.rc .rcard .rcta{padding:3px 10px;font-size:11.5px}
+.rc .rf{display:flex;gap:8px;margin-top:10px}
+.rc .rf span{background:var(--r-btn);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--r-ink)}
 /* ---------- ChatGPT previews ---------- */
 .gc{--g-bg:#FFFFFF;--g-ink:#0D0D0D;--g-sub:#5D5D5D;--g-line:#E5E5E5;--g-bubble:#F4F4F4;--g-skel:#ECECEC;
   font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--g-bg);color:var(--g-ink);border-radius:14px;box-shadow:0 1px 3px rgb(0 0 0 / .16);width:100%;max-width:640px;padding:18px 18px 20px}
@@ -547,7 +579,7 @@ const MLIMIT={primary:125,headline:40,description:30};  /* Meta's recommended le
 const mads=((META&&META.ads)||[]).map(a=>Object.assign({},a,{rawId:a.id,id:"meta:"+a.id,
   title:a.name||(a.headline||[])[0]||a.adset,text:[a.name,a.campaign,a.adset,...(a.primary||[]),...(a.headline||[]),...(a.description||[])].join(" ").toLowerCase()}));
 Object.assign(state,{plat:"google",mfmt:"All",mplace:store.get("mplace","fb")});
-function findAd(id){return ads.find(a=>a.id===id)||mads.find(a=>a.id===id)||gptAds.find(a=>a.id===id)}
+function findAd(id){return ads.find(a=>a.id===id)||mads.find(a=>a.id===id)||gptAds.find(a=>a.id===id)||rdAds.find(a=>a.id===id)}
 function mCombos(ad){
   if(!ad._mc){
     const out=[],P=ad.primary.length?ad.primary:[""],H=ad.headline.length?ad.headline:[""],D=ad.description[0]||"";
@@ -690,8 +722,9 @@ function mRender(){
   mRenderList(list);mRenderDetail();
   try{history.replaceState(null,"",state.sel?"#meta-"+state.sel.replace(/^meta:/,""):location.pathname+location.search)}catch(e){}
 }
-$("#f-mfmt").onclick=e=>{const b=e.target.closest("button");if(b){state[state.plat==="gpt"?"gstat":"mfmt"]=b.dataset.v;render()}};
+$("#f-mfmt").onclick=e=>{const b=e.target.closest("button");if(b){state[{gpt:"gstat",reddit:"rstat"}[state.plat]||"mfmt"]=b.dataset.v;render()}};
 const PLAT_ICON={google:`<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h6" stroke="currentColor" stroke-width="1.6"/></svg>`,
+  reddit:`<svg viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="9.6" rx="5.6" ry="4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5.6l1-3.4 2.6.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12.2" cy="3" r="1.1" fill="currentColor"/><circle cx="6" cy="9.3" r=".9" fill="currentColor"/><circle cx="10" cy="9.3" r=".9" fill="currentColor"/></svg>`,
   gpt:`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5A2.5 2.5 0 0 1 5.5 2h5A2.5 2.5 0 0 1 13 4.5v4a2.5 2.5 0 0 1-2.5 2.5H8l-3 3v-3A2 2 0 0 1 3 9z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
   meta:`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 10.5c0-3 1.6-5.5 3.3-5.5 2.3 0 3.3 6 5.4 6 1.1 0 1.8-1 1.8-2.6 0-2.4-1.2-4.4-2.7-4.4-1.6 0-2.6 2.2-3.7 4.4C5 11 4.3 12 3.4 12 2.5 12 2 11.4 2 10.5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`};
 function setPlat(p){
@@ -774,6 +807,85 @@ function gRender(){
   if(!list.some(a=>a.id===state.sel))state.sel=(list[0]||{}).id||null;
   gRenderList(list);gRenderDetail();
   try{history.replaceState(null,"",state.sel?"#gpt-"+state.sel.replace(/^gpt:/,""):location.pathname+location.search)}catch(e){}
+}
+
+/* ---------- Reddit ads ---------- */
+const RD=DATA.reddit||null,hasReddit=!!(RD||DATA.redditError);
+const RFMT={image:"Image",video:"Video",carousel:"Carousel",text:"Text",product:"Product (catalog)"};
+const rdAds=((RD&&RD.ads)||[]).map(a=>Object.assign({},a,{rawId:a.id,id:"rd:"+a.id,title:a.name||a.headline||a.adset,
+  text:[a.name,a.campaign,a.adset,a.headline,a.body,(a.cards||[]).map(c=>c.caption).join(" ")].join(" ").toLowerCase()}));
+Object.assign(state,{rstat:rdAds.some(a=>a.status==="active")?"active":"All",rview:store.get("rview","desktop")});
+function rPreview(ad){
+  const user=ad.profile||RD.account.name||DATA.client,icon=RD.account.icon;
+  const cta=c=>c?`<span class="rcta">${esc(c)}</span>`:"";
+  let media="";
+  if(ad.format==="carousel")media=`<div class="rcar">${ad.cards.map(c=>`<a class="rcard" href="${esc(c.link||ad.link||"#")}" target="_blank" rel="noopener">${c.image?`<img src="${esc(c.image)}" alt="">`:`<div class="ph">No picture</div>`}<div><b>${esc(c.caption||c.displayUrl||domainOf(c.link||ad.link))}</b>${cta(c.cta)}</div></a>`).join("")}</div>`;
+  else if(ad.format==="image"||ad.format==="video")media=`<a class="rm" href="${esc(ad.link||"#")}" target="_blank" rel="noopener">${ad.images[0]?`<img src="${esc(ad.images[0])}" alt="">`:`<div class="ph">${ad.format==="video"?"Video (no thumbnail)":"No picture"}</div>`}${ad.format==="video"?`<span class="rplay"><span><svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z"/></svg></span></span>`:""}</a>`;
+  else if(ad.format==="product")media=`<div class="rm"><div class="ph">Products from the catalog fill this ad</div></div>`;
+  const bar=ad.format!=="carousel"&&ad.link?`<a class="rlink" href="${esc(ad.link)}" target="_blank" rel="noopener"><span>${esc(ad.displayUrl||domainOf(ad.link))}</span>${cta(ad.cta)}</a>`:"";
+  return `<div class="rc${state.rview==="mobile"?" mob":""}"><div class="rh"><span class="ri">${icon?`<img src="${esc(icon)}" alt="">`:"u/"}</span><span class="ru">u/${esc(user)}</span><span>· Promoted</span></div>
+    <div class="rt">${esc(ad.headline||"(no headline)")}</div>${ad.body?`<div class="rb">${esc(ad.body)}</div>`:""}${media}${bar}
+    <div class="rf"><span>⇧ Vote ⇩</span>${ad.allowComments?"<span>Comments</span>":""}<span>Share</span></div></div>`;
+}
+function rFiltered(){
+  const q=state.q.trim().toLowerCase();
+  return rdAds.filter(a=>(state.campaign==="All"||a.campaign===state.campaign)&&(state.rstat==="All"||(state.rstat==="active")===(a.status==="active"))&&(!q||a.text.includes(q)));
+}
+function rRenderList(list){
+  const el=$("#list");
+  if(!list.length){el.innerHTML=`<div class="empty">${!RD?"Reddit ads could not be read.":rdAds.length?"No ads match these filters.":"No Reddit ads in this account yet."}</div>`;return}
+  const groups=new Map();
+  list.forEach(a=>{if(!groups.has(a.campaign))groups.set(a.campaign,[]);groups.get(a.campaign).push(a)});
+  el.innerHTML=[...groups].map(([camp,items])=>`<div class="grp"><span>${esc(camp)}</span><span>Reddit</span></div>`+items.map(a=>`<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
+      <span class="t">${esc(a.title)}</span><span class="s">${esc(a.adset)}</span>
+      <span class="r"><span class="kind RD">Reddit</span>${a.status!=="active"?`<span class="kind off">${esc(gStatus(a))}</span>`:""}<span class="kind fmt">${esc(RFMT[a.format]||a.format)}</span></span></button>`).join("")).join("");
+}
+function rAssets(ad){
+  const st=ad.settings||{};
+  const txt=(t,d)=>t?`<li><span class="st">${esc(t)}</span><span class="sd">${esc(d)}</span></li>`:"";
+  const rows=[["Objective",st.objective],["Bid strategy",st.strategy],["Bid",st.bid],["Budget",st.budget?st.budget+" ("+st.budgetLevel+")":""],["Campaign spend cap",st.spendCap],
+    ["Schedule",st.schedule],["Optimisation goal",st.goal],["Locations",(st.locations||[]).length?st.locations.join(", "):"All available locations"],
+    ["Devices",(st.devices||[]).length?st.devices.join(", "):"All devices"],st.interests?["Interests",st.interests+" targeted"]:null,
+    st.audiences||st.excluded?["Custom audiences",[st.audiences?st.audiences+" included":"",st.excluded?st.excluded+" excluded":""].filter(Boolean).join(", ")]:null,
+    st.expand?["Expanded targeting","On"]:null,["Comments",ad.allowComments?"Allowed":"Off"],ad.rejection?["Rejection",ad.rejection]:null].filter(r=>r&&r[1]);
+  const media=ad.format==="carousel"?gallery("Carousel cards",ad.cards.filter(c=>c.image).map(c=>({img:c.image,f:c.caption}))):ad.images.length?gallery(ad.format==="video"?"Video thumbnail":"Image",ad.images.map(img=>({img}))):"";
+  const cards=ad.format==="carousel"?`<section class="aset"><h3>Cards <span class="n">${ad.cards.length}</span></h3><ul class="slist">${ad.cards.map((c,i)=>txt(c.caption||"(no caption)",`Card ${i+1}${c.cta?" · "+c.cta:""}${c.link?" · "+domainOf(c.link):""}`)).join("")}</ul></section>`:"";
+  return `<div class="phead"><h3>Live assets</h3><span class="src">Read from Reddit Ads ${esc(RD.pulledAt)}</span></div>
+    <div class="agrid"><section class="aset"><h3>Text</h3><ul class="slist">${txt(ad.headline||"(none)",[...(ad.headline||"")].length+" of 300 characters · headline")}${txt(ad.body,"Body text")}${txt(ad.cta,"Call to action")}${txt(ad.displayUrl,"Display URL")}</ul></section>
+    ${cards}${chipList("Communities (ad group)",st.communities)}${chipList("Keywords (ad group)",st.keywords)}</div>${media?`<div class="agrid media">${media}</div>`:""}
+    <div class="agrid media"><section class="aset wide"><h3>Bidding and targeting</h3><ul class="slist">${rows.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul></section></div>`;
+}
+function rRenderDetail(){
+  const el=$("#detail");
+  if(!RD){el.innerHTML=`<div class="panel"><div class="merr">${esc(DATA.redditError||"Reddit ads are not set up for this dashboard.")}</div></div>`;return}
+  const ad=rdAds.find(a=>a.id===state.sel);
+  if(!ad){el.innerHTML=`<div class="panel empty">${rdAds.length?"Pick an ad on the left to see its preview.":"There are no Reddit ads in this account yet."}</div>`;return}
+  const note=(ad.format==="carousel"?`A carousel of ${ad.cards.length} cards, each with its own caption and link. `:ad.format==="product"?"A catalog ad: Reddit fills it with products from the feed. ":"")
+    +"Drawn to look like a promoted post in the Reddit feed"+(ad.preview?"; Reddit's own preview shows the exact rendering.":".");
+  el.innerHTML=`
+  <div class="panel">
+    <div class="crumb"><span>${esc(RD.account.name)}</span><span>${esc(ad.campaign)}</span><span>${esc(ad.adset)}</span></div>
+    <h2>${esc(ad.title)}</h2>
+    <div class="meta"><span class="kind RD">Reddit</span><span class="kind fmt">${esc(RFMT[ad.format]||ad.format)}</span>${ad.status!=="active"?`<span class="kind off">${esc(gStatus(ad))}</span>`:"<span>Active</span>"}${ad.created?`<span>made ${esc(ad.created)}</span>`:""}
+      <span class="mono" style="font-size:12px">Ad ID ${esc(ad.rawId)}</span>${ad.link?`<a href="${esc(ad.link)}" target="_blank" rel="noopener">Landing page ↗</a>`:""}${ad.postUrl?`<a href="${esc(ad.postUrl)}" target="_blank" rel="noopener">Post on Reddit ↗</a>`:""}</div>
+    <div class="note real">${esc(note)}</div>
+  </div>
+  <div class="panel">
+    <div class="phead"><h3>Preview</h3><div class="bar">${seg("rview",[["desktop","Desktop"],["mobile","Mobile"]])}</div></div>
+    ${ad.preview?`<div class="glinks"><span class="gl-lab">Reddit's own preview</span><a class="glink" href="${esc(ad.preview)}" target="_blank" rel="noopener">Open ↗</a></div>`:""}
+    <div class="stage">${rPreview(ad)}</div>
+  </div>
+  <div class="panel">${rAssets(ad)}</div>`;
+  loadComments(ad);
+}
+function rRender(){
+  const camps=[...new Set(rdAds.map(a=>a.campaign))].sort();
+  $("#f-campaign").innerHTML=`<option value="All">All campaigns (${camps.length})</option>`+camps.map(c=>`<option value="${esc(c)}"${c===state.campaign?" selected":""}>${esc(c)}</option>`).join("");
+  segBtns($("#f-mfmt"),[["active","Active"],["paused","Not running"],["All","All ads"]],"rstat");
+  const list=rFiltered();
+  if(!list.some(a=>a.id===state.sel))state.sel=(list[0]||{}).id||null;
+  rRenderList(list);rRenderDetail();
+  try{history.replaceState(null,"",state.sel?"#reddit-"+state.sel.replace(/^rd:/,""):location.pathname+location.search)}catch(e){}
 }
 
 /* ---------- filters & list ---------- */
@@ -1010,8 +1122,8 @@ function renderDetail(){
 }
 $("#detail").addEventListener("click",e=>{
   const s=e.target.closest(".seg[data-key] button");
-  const meta=state.plat==="meta",redraw=meta?mRenderDetail:state.plat==="gpt"?gRenderDetail:renderDetail;
-  if(s){const k=s.parentElement.dataset.key;state[k]=s.dataset.v;if(k==="pcat")state.combo=0;if(k==="device")store.set("device",state.device);if(k==="mplace")store.set("mplace",state.mplace);if(k==="gview")store.set("gview",state.gview);redraw();return}
+  const meta=state.plat==="meta",redraw=meta?mRenderDetail:state.plat==="gpt"?gRenderDetail:state.plat==="reddit"?rRenderDetail:renderDetail;
+  if(s){const k=s.parentElement.dataset.key;state[k]=s.dataset.v;if(k==="pcat")state.combo=0;if(k==="device")store.set("device",state.device);if(k==="mplace")store.set("mplace",state.mplace);if(k==="gview"||k==="rview")store.set(k,state[k]);redraw();return}
   const c=e.target.closest(".combo");if(c){state.combo=+c.dataset.i;redraw();return}
   const st=e.target.closest("[data-step]");
   if(st){const ad=findAd(state.sel);if(!ad)return;const n=meta?mCombos(ad).length:combosOf(ad).length;if(n){state.combo=(state.combo+Number(st.dataset.step)+n)%n;redraw()}}
@@ -1028,7 +1140,13 @@ function hbars(rows,max,btn){
 /* ---------- header + render ---------- */
 function renderHeader(){
   $("#client").textContent=DATA.client;
-  const sources=["Google Ads",hasMeta?"Meta":"",hasGpt?"ChatGPT":""].filter(Boolean),srcText=sources.length>2?sources.slice(0,-1).join(", ")+" and "+sources.at(-1):sources.join(" and ");
+  const sources=["Google Ads",hasMeta?"Meta":"",hasReddit?"Reddit":"",hasGpt?"ChatGPT":""].filter(Boolean),srcText=sources.length>2?sources.slice(0,-1).join(", ")+" and "+sources.at(-1):sources.join(" and ");
+  if(state.plat==="reddit"){
+    const live=/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname);
+    $("#fresh").innerHTML=RD?`<span>Reddit ads · ${esc(RD.account.name)}</span><span>Read from Reddit Ads <b>${esc(whenText(RD.pulledAt.replace(" ","T")))}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${live?`<a class="refresh" href="api/rebuild">Refresh from ${srcText}</a>`:""}`
+      :`<span>Reddit ads could not be read</span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>`;
+    return;
+  }
   if(state.plat==="gpt"){
     const live=/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname);
     $("#fresh").innerHTML=GPT?`<span>ChatGPT ads · ${esc(GPT.account.name)}</span><span>Read from ChatGPT Ads <b>${esc(whenText(GPT.pulledAt.replace(" ","T")))}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${live?`<a class="refresh" href="api/rebuild">Refresh from ${srcText}</a>`:""}`
@@ -1046,16 +1164,17 @@ function renderHeader(){
   $("#fresh").innerHTML=`<span>Google combinations · <b>${esc(DATA.dateRange)}</b></span><span>Exported from Google Ads <b>${esc(when)}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname)?`<a class="refresh" href="api/rebuild">Refresh from ${DATA.source==="api"?srcText:["sheet",...sources.slice(1)].join(" and ")}</a>`:""}`;
 }
 function render(){
-  const meta=state.plat==="meta",gpt=state.plat==="gpt",other=meta||gpt;
-  const plats=[["google","Google"],hasMeta?["meta","Meta"]:null,hasGpt?["gpt","ChatGPT"]:null].filter(Boolean);
+  const meta=state.plat==="meta",gpt=state.plat==="gpt",reddit=state.plat==="reddit",other=meta||gpt||reddit;
+  const plats=[["google","Google"],hasMeta?["meta","Meta"]:null,hasReddit?["reddit","Reddit"]:null,hasGpt?["gpt","ChatGPT"]:null].filter(Boolean);
   if(plats.length>1)$("#f-plat").innerHTML=plats.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${state.plat===v}">${PLAT_ICON[v]}${l}</button>`).join("");
   $("#f-plat").hidden=plats.length<2;
   ["#f-account","#f-kind",".check","#sumBtn"].forEach(s=>$(s).hidden=other);$("#f-mfmt").hidden=!other;
-  $("#f-mfmt").setAttribute("aria-label",gpt?"Status":"Format");
-  $("#f-q").placeholder=meta?"Search primary text, headlines, ad names":gpt?"Search titles, text, ad names":"Search headlines, descriptions, ad groups";
+  $("#f-mfmt").setAttribute("aria-label",gpt||reddit?"Status":"Format");
+  $("#f-q").placeholder=meta?"Search primary text, headlines, ad names":gpt?"Search titles, text, ad names":reddit?"Search headlines, captions, ad names":"Search headlines, descriptions, ad groups";
   renderHeader();
   if(meta)return mRender();
   if(gpt)return gRender();
+  if(reddit)return rRender();
   const accts=[...new Set(ads.map(a=>a.account))].sort();
   segBtns($("#f-account"),[["All","All accounts"],...accts.map(a=>[a,a])],"account");
   segBtns($("#f-kind"),[["All","All types"],["RSA","Search"],["PMAX","PMax"],["DG","Demand Gen"]],"kind");
@@ -1070,12 +1189,14 @@ function render(){
 $("#f-campaign").onchange=e=>{state.campaign=e.target.value;render()};
 $("#f-q").oninput=e=>{state.q=e.target.value;render()};
 $("#f-unserved").onchange=e=>{state.unserved=e.target.checked;render()};
-const hm=location.hash.match(/^#ad-(.+)$/),mm=location.hash.match(/^#meta-(.+)$/),gm=location.hash.match(/^#gpt-(.+)$/);
+const hm=location.hash.match(/^#ad-(.+)$/),mm=location.hash.match(/^#meta-(.+)$/),gm=location.hash.match(/^#gpt-(.+)$/),rm=location.hash.match(/^#reddit-(.+)$/);
 if(mm&&hasMeta){state.plat="meta";if(mads.some(a=>a.rawId===mm[1]))state.sel="meta:"+mm[1]}
 else if(gm&&hasGpt){state.plat="gpt";const g=gptAds.find(a=>a.rawId===gm[1]);if(g){state.sel=g.id;if(g.status!=="active")state.gstat="All"}}
+else if(rm&&hasReddit){state.plat="reddit";const r=rdAds.find(a=>a.rawId===rm[1]);if(r){state.sel=r.id;if(r.status!=="active")state.rstat="All"}}
 else if(hm&&ads.some(a=>a.id===hm[1]))state.sel=hm[1];
 else if(hasMeta&&store.get("plat","google")==="meta")state.plat="meta";
 else if(hasGpt&&store.get("plat","google")==="gpt")state.plat="gpt";
+else if(hasReddit&&store.get("plat","google")==="reddit")state.plat="reddit";
 if(state.plat==="google"&&!state.sel){const top=ads.filter(a=>a.served&&a.kind==="RSA").sort((a,b)=>b.impressions-a.impressions)[0];if(top)state.sel=top.id}
 render();
 
