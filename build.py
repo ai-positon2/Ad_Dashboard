@@ -25,6 +25,7 @@ import pandas as pd
 from PIL import Image
 
 import gads_api
+import gpt_api
 import meta_api
 
 ROOT = Path(__file__).parent
@@ -641,6 +642,24 @@ def load_meta(assets, forced, logo=""):
     return {"account": m["account"], "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
 
 
+def load_gpt(assets, forced, logo=""):
+    """The client's ChatGPT ads for the ChatGPT view, pictures downloaded like Google's; (data, error). Not set up: (None, "")."""
+    if not gpt_api.enabled(CLIENT):
+        return None, ""
+    if not gpt_api.token(CLIENT):
+        return None, f"{gpt_api.key_env(CLIENT)} is not set on this server, so the ChatGPT ads cannot be read."
+    try:
+        m = gpt_api.load_or_pull(CLIENT_KEY, CLIENT, forced=forced)
+    except Exception as e:
+        print(f"! ChatGPT ads failed ({e})")
+        return None, f"The ChatGPT ads could not be read: {e}"
+    assets.prefetch([u for a in m["ads"] for u in a["images"]] + [m["account"]["icon"]])
+    ads = [dict(a, images=[x for x in (assets.get(u) for u in a["images"]) if x]) for a in m["ads"]]
+    account = dict(m["account"], icon=assets.get(m["account"]["icon"]) if m["account"]["icon"] else logo)  # no icon from OpenAI: the client's own logo
+    print(f"ChatGPT: {len(ads)} ads read {m['pulledAt']}")
+    return {"account": account, "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
+
+
 def main():
     forced = gads_api.FORCE.is_set() or os.environ.get("GADS_FORCE") == "1"  # read before the Google pull clears it, so a Refresh reads Meta again too
     x, api_data = load_tables()
@@ -691,7 +710,9 @@ def main():
         "performance": build_performance(perf_tab),
         "perfExportedAt": first(perf_tab, "Exported at"),
     }
-    payload["meta"], payload["metaError"] = load_meta(assets, forced, logo=next((v for v in logos.values() if v), ""))
+    logo = next((v for v in logos.values() if v), "")
+    payload["meta"], payload["metaError"] = load_meta(assets, forced, logo=logo)
+    payload["gpt"], payload["gptError"] = load_gpt(assets, forced, logo=logo)
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8").replace("__CLIENT__", CLIENT["name"])
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)

@@ -324,6 +324,38 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 .mf.st .pn,.mf.st .sp{color:#fff}
 .mf.st .cap{position:absolute;left:14px;right:14px;bottom:78px;font-size:14px;line-height:1.35;text-shadow:0 1px 3px rgb(0 0 0 / .6);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .mf.st .scta{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:#fff;color:#111;border-radius:99px;padding:8px 18px;font-weight:600;font-size:14px;white-space:nowrap}
+.kind.GPT{background:#E6F4EF;color:#0B7A5A}
+.kind.off{background:var(--s-average-bg);color:var(--s-average)}
+/* ---------- ChatGPT previews ---------- */
+.gc{--g-bg:#FFFFFF;--g-ink:#0D0D0D;--g-sub:#5D5D5D;--g-line:#E5E5E5;--g-bubble:#F4F4F4;--g-skel:#ECECEC;
+  font-family:ui-sans-serif,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--g-bg);color:var(--g-ink);border-radius:14px;box-shadow:0 1px 3px rgb(0 0 0 / .16);width:100%;max-width:640px;padding:18px 18px 20px}
+.gc.mob{max-width:380px}
+:root[data-theme="dark"] .gc{--g-bg:#212121;--g-ink:#ECECEC;--g-sub:#B4B4B4;--g-line:#3A3A3A;--g-bubble:#303030;--g-skel:#2F2F2F}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .gc{--g-bg:#212121;--g-ink:#ECECEC;--g-sub:#B4B4B4;--g-line:#3A3A3A;--g-bubble:#303030;--g-skel:#2F2F2F}}
+.gc .gq{display:flex;justify-content:flex-end;margin-bottom:14px}
+.gc .gq span{background:var(--g-bubble);border-radius:18px;padding:9px 14px;font-size:14px;color:var(--g-sub);font-style:italic}
+.gc .ga{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.gc .ga i{display:block;height:10px;border-radius:5px;background:var(--g-skel)}
+.gc .ga i.s{width:62%}
+.gc .gad{border:1px solid var(--g-line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.gc .gh{display:flex;align-items:center;gap:8px;font-size:13px}
+.gc .gi{width:20px;height:20px;border-radius:50%;overflow:hidden;background:var(--g-skel);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.gc .gi img{width:100%;height:100%;object-fit:cover}
+.gc .gb{font-weight:600}
+.gc .gs{color:var(--g-sub);margin-left:auto;font-size:12px}
+.gc .gbody{display:flex;gap:12px;align-items:flex-start;color:inherit;text-decoration:none}
+.gc .gpic{width:96px;height:96px;border-radius:10px;overflow:hidden;flex:none;background:var(--g-skel)}
+.gc .gpic img{width:100%;height:100%;object-fit:cover;display:block}
+.gc .gpic .ph{width:100%;height:100%;padding:6px;font-size:11px}
+.gc .gtx{min-width:0}
+.gc .gt{font-weight:600;font-size:15px;line-height:1.3}
+.gc .gd{font-size:14px;line-height:1.4;color:var(--g-sub);margin-top:3px}
+.gc .gp{font-size:14px;font-weight:600;margin-top:4px}
+.gc .gdom{font-size:12px;color:var(--g-sub);margin-top:6px}
+.gc .gcar{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin}
+.gc .gcar img{width:132px;height:132px;border-radius:10px;object-fit:cover;flex:none}
+.gc.mob .gbody{flex-direction:column}
+.gc.mob .gpic{width:100%;height:auto;aspect-ratio:1/1}
 .merr{font-size:13.5px;padding:12px 14px;border-radius:8px;background:var(--s-average-bg);color:var(--s-average)}
 </style>
 
@@ -515,7 +547,7 @@ const MLIMIT={primary:125,headline:40,description:30};  /* Meta's recommended le
 const mads=((META&&META.ads)||[]).map(a=>Object.assign({},a,{rawId:a.id,id:"meta:"+a.id,
   title:a.name||(a.headline||[])[0]||a.adset,text:[a.name,a.campaign,a.adset,...(a.primary||[]),...(a.headline||[]),...(a.description||[])].join(" ").toLowerCase()}));
 Object.assign(state,{plat:"google",mfmt:"All",mplace:store.get("mplace","fb")});
-function findAd(id){return ads.find(a=>a.id===id)||mads.find(a=>a.id===id)}
+function findAd(id){return ads.find(a=>a.id===id)||mads.find(a=>a.id===id)||gptAds.find(a=>a.id===id)}
 function mCombos(ad){
   if(!ad._mc){
     const out=[],P=ad.primary.length?ad.primary:[""],H=ad.headline.length?ad.headline:[""],D=ad.description[0]||"";
@@ -658,14 +690,91 @@ function mRender(){
   mRenderList(list);mRenderDetail();
   try{history.replaceState(null,"",state.sel?"#meta-"+state.sel.replace(/^meta:/,""):location.pathname+location.search)}catch(e){}
 }
-$("#f-mfmt").onclick=e=>{const b=e.target.closest("button");if(b){state.mfmt=b.dataset.v;render()}};
+$("#f-mfmt").onclick=e=>{const b=e.target.closest("button");if(b){state[state.plat==="gpt"?"gstat":"mfmt"]=b.dataset.v;render()}};
 const PLAT_ICON={google:`<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h6" stroke="currentColor" stroke-width="1.6"/></svg>`,
+  gpt:`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 4.5A2.5 2.5 0 0 1 5.5 2h5A2.5 2.5 0 0 1 13 4.5v4a2.5 2.5 0 0 1-2.5 2.5H8l-3 3v-3A2 2 0 0 1 3 9z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
   meta:`<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 10.5c0-3 1.6-5.5 3.3-5.5 2.3 0 3.3 6 5.4 6 1.1 0 1.8-1 1.8-2.6 0-2.4-1.2-4.4-2.7-4.4-1.6 0-2.6 2.2-3.7 4.4C5 11 4.3 12 3.4 12 2.5 12 2 11.4 2 10.5Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>`};
 function setPlat(p){
   if(p===state.plat)return;
   state.plat=p;state.campaign="All";state.q="";$("#f-q").value="";state.sel=null;state.combo=0;store.set("plat",p);render();
 }
 $("#f-plat").onclick=e=>{const b=e.target.closest("button");if(b)setPlat(b.dataset.v)};
+
+/* ---------- ChatGPT ads ---------- */
+const GPT=DATA.gpt||null,hasGpt=!!(GPT||DATA.gptError);
+const GFMT={single:"Single image",multi:"Multiple images",product:"Product template"};
+const GLIMIT={title:50,body:100};  /* OpenAI's limits for a chat card */
+const gptAds=((GPT&&GPT.ads)||[]).map(a=>Object.assign({},a,{rawId:a.id,id:"gpt:"+a.id,title:a.name||a.title||a.adset,
+  text:[a.name,a.campaign,a.adset,a.title,a.body].join(" ").toLowerCase()}));
+Object.assign(state,{gstat:gptAds.some(a=>a.status==="active")?"active":"All",gview:store.get("gview","desktop")});
+function gStatus(a){return a.status==="active"?"Active":a.status.charAt(0).toUpperCase()+a.status.slice(1)}
+function gPreview(ad){
+  const brand=GPT.account.brand||DATA.client,icon=GPT.account.icon;
+  const pic=ad.format==="multi"&&ad.images.length>1?`<div class="gcar">${ad.images.map(i=>`<img src="${esc(i)}" alt="">`).join("")}</div>`:"";
+  const one=ad.images[0]?`<img src="${esc(ad.images[0])}" alt="">`:`<div class="ph">${ad.format==="product"?"Picture from the product feed":"No picture"}</div>`;
+  return `<div class="gc${state.gview==="mobile"?" mob":""}"><div class="gq"><span>A person's question</span></div><div class="ga"><i></i><i></i><i></i><i class="s"></i></div>
+    <div class="gad"><div class="gh"><span class="gi">${icon?`<img src="${esc(icon)}" alt="">`:esc(brand.charAt(0).toUpperCase())}</span><span class="gb">${esc(brand)}</span><span class="gs">Sponsored</span></div>
+      ${pic}<a class="gbody" href="${esc(ad.link||"#")}" target="_blank" rel="noopener">${pic?"":`<span class="gpic">${one}</span>`}<span class="gtx"><div class="gt">${esc(ad.title)}</div>${ad.body?`<div class="gd">${esc(ad.body)}</div>`:""}${ad.price?`<div class="gp">${esc(ad.price)}</div>`:""}${ad.link?`<div class="gdom">${esc(domainOf(ad.link))}</div>`:""}</span></a></div></div>`;
+}
+function gFiltered(){
+  const q=state.q.trim().toLowerCase();
+  return gptAds.filter(a=>(state.campaign==="All"||a.campaign===state.campaign)&&(state.gstat==="All"||(state.gstat==="active")===(a.status==="active"))&&(!q||a.text.includes(q)));
+}
+function gRenderList(list){
+  const el=$("#list");
+  if(!list.length){el.innerHTML=`<div class="empty">${!GPT?"ChatGPT ads could not be read.":gptAds.length?"No ads match these filters.":"No ChatGPT ads in this account yet."}</div>`;return}
+  const groups=new Map();
+  list.forEach(a=>{if(!groups.has(a.campaign))groups.set(a.campaign,[]);groups.get(a.campaign).push(a)});
+  el.innerHTML=[...groups].map(([camp,items])=>`<div class="grp"><span>${esc(camp)}</span><span>ChatGPT</span></div>`+items.map(a=>`<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
+      <span class="t">${esc(a.title)}</span><span class="s">${esc(a.adset)}</span>
+      <span class="r"><span class="kind GPT">ChatGPT</span>${a.status!=="active"?`<span class="kind off">${esc(gStatus(a))}</span>`:""}<span class="kind fmt">${esc(GFMT[a.format]||a.format)}</span></span></button>`).join("")).join("");
+}
+function gAssets(ad){
+  const len=(t,n)=>`<li><span class="st">${esc(t||"(none)")}</span><span class="sd">${[...(t||"")].length} of ${n} characters</span></li>`;
+  const st=ad.settings||{};
+  const rows=[["Campaign bidding",st.bidding],["Ad group bid",st.bid],["Campaign budget",st.budget?st.budget+" lifetime":""],["Schedule",st.schedule],
+    ["Platforms",(st.platforms||[]).length?st.platforms.join(", "):"All ChatGPT platforms"],["Locations",st.locations?st.locations+" targeted":"All available locations"],
+    st.audiences||st.excluded?["Custom audiences",[st.audiences?st.audiences+" included":"",st.excluded?st.excluded+" excluded":""].filter(Boolean).join(", ")]:null,
+    st.productFeed?["Campaign","Product feed"]:null,["Review",ad.review]].filter(r=>r&&r[1]);
+  const media=ad.images.length?gallery(ad.format==="multi"?"Images":"Image",ad.images.map(img=>({img}))):"";
+  return `<div class="phead"><h3>Live assets</h3><span class="src">Read from ChatGPT Ads ${esc(GPT.pulledAt)}</span></div>
+    <div class="agrid"><section class="aset"><h3>Text</h3><ul class="slist">${len(ad.title,GLIMIT.title)}${len(ad.body,GLIMIT.body)}${ad.price?`<li><span class="st">${esc(ad.price)}</span><span class="sd">Price</span></li>`:""}</ul></section>
+    ${chipList("Context hints (ad group)",st.hints)}</div>${media?`<div class="agrid media">${media}</div>`:""}
+    <div class="agrid media"><section class="aset wide"><h3>Bidding and targeting</h3><ul class="slist">${rows.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul>
+    ${st.groupNote?`<p class="csub">Ad group note: ${esc(st.groupNote)}</p>`:""}${st.campaignNote?`<p class="csub">Campaign note: ${esc(st.campaignNote)}</p>`:""}</section></div>`;
+}
+function gRenderDetail(){
+  const el=$("#detail");
+  if(!GPT){el.innerHTML=`<div class="panel"><div class="merr">${esc(DATA.gptError||"ChatGPT ads are not set up for this dashboard.")}</div></div>`;return}
+  const ad=gptAds.find(a=>a.id===state.sel);
+  if(!ad){el.innerHTML=`<div class="panel empty">${gptAds.length?"Pick an ad on the left to see its preview.":"There are no ChatGPT ads in this account yet."}</div>`;return}
+  const note=(ad.format==="product"?"A product template: the picture, price and link come from the product feed item ChatGPT picks, so placeholders show as written. ":ad.format==="multi"?`An ad with ${ad.images.length} images: they share one title, text and link. `:"")
+    +"Drawn to look like an ad under a ChatGPT answer"+(ad.preview?"; OpenAI's own preview shows the exact rendering.":".");
+  el.innerHTML=`
+  <div class="panel">
+    <div class="crumb"><span>${esc(GPT.account.name)}</span><span>${esc(ad.campaign)}</span><span>${esc(ad.adset)}</span></div>
+    <h2>${esc(ad.title)}</h2>
+    <div class="meta"><span class="kind GPT">ChatGPT</span><span class="kind fmt">${esc(GFMT[ad.format]||ad.format)}</span>${ad.status!=="active"?`<span class="kind off">${esc(gStatus(ad))}</span>`:""}<span>${ad.status==="active"?"Active":""}${ad.review?`${ad.status==="active"?" · ":""}Review: ${esc(ad.review)}`:""}${ad.created?` · made ${esc(ad.created)}`:""}</span>
+      <span class="mono" style="font-size:12px">Ad ID ${esc(ad.rawId)}</span>${ad.link?`<a href="${esc(ad.link)}" target="_blank" rel="noopener">Landing page ↗</a>`:""}</div>
+    <div class="note real">${esc(note)}</div>
+  </div>
+  <div class="panel">
+    <div class="phead"><h3>Preview</h3><div class="bar">${seg("gview",[["desktop","Desktop"],["mobile","Mobile"]])}</div></div>
+    ${ad.preview?`<div class="glinks"><span class="gl-lab">OpenAI's own preview</span><a class="glink" href="${esc(ad.preview)}" target="_blank" rel="noopener">Open ↗</a><span class="gl-n">the link lasts a day and is renewed with each refresh</span></div>`:""}
+    <div class="stage">${gPreview(ad)}</div>
+  </div>
+  <div class="panel">${gAssets(ad)}</div>`;
+  loadComments(ad);
+}
+function gRender(){
+  const camps=[...new Set(gptAds.map(a=>a.campaign))].sort();
+  $("#f-campaign").innerHTML=`<option value="All">All campaigns (${camps.length})</option>`+camps.map(c=>`<option value="${esc(c)}"${c===state.campaign?" selected":""}>${esc(c)}</option>`).join("");
+  segBtns($("#f-mfmt"),[["active","Active"],["paused","Not running"],["All","All ads"]],"gstat");
+  const list=gFiltered();
+  if(!list.some(a=>a.id===state.sel))state.sel=(list[0]||{}).id||null;
+  gRenderList(list);gRenderDetail();
+  try{history.replaceState(null,"",state.sel?"#gpt-"+state.sel.replace(/^gpt:/,""):location.pathname+location.search)}catch(e){}
+}
 
 /* ---------- filters & list ---------- */
 function segBtns(el,opts,key){
@@ -901,8 +1010,8 @@ function renderDetail(){
 }
 $("#detail").addEventListener("click",e=>{
   const s=e.target.closest(".seg[data-key] button");
-  const meta=state.plat==="meta",redraw=meta?mRenderDetail:renderDetail;
-  if(s){const k=s.parentElement.dataset.key;state[k]=s.dataset.v;if(k==="pcat")state.combo=0;if(k==="device")store.set("device",state.device);if(k==="mplace")store.set("mplace",state.mplace);redraw();return}
+  const meta=state.plat==="meta",redraw=meta?mRenderDetail:state.plat==="gpt"?gRenderDetail:renderDetail;
+  if(s){const k=s.parentElement.dataset.key;state[k]=s.dataset.v;if(k==="pcat")state.combo=0;if(k==="device")store.set("device",state.device);if(k==="mplace")store.set("mplace",state.mplace);if(k==="gview")store.set("gview",state.gview);redraw();return}
   const c=e.target.closest(".combo");if(c){state.combo=+c.dataset.i;redraw();return}
   const st=e.target.closest("[data-step]");
   if(st){const ad=findAd(state.sel);if(!ad)return;const n=meta?mCombos(ad).length:combosOf(ad).length;if(n){state.combo=(state.combo+Number(st.dataset.step)+n)%n;redraw()}}
@@ -919,24 +1028,34 @@ function hbars(rows,max,btn){
 /* ---------- header + render ---------- */
 function renderHeader(){
   $("#client").textContent=DATA.client;
+  const sources=["Google Ads",hasMeta?"Meta":"",hasGpt?"ChatGPT":""].filter(Boolean),srcText=sources.length>2?sources.slice(0,-1).join(", ")+" and "+sources.at(-1):sources.join(" and ");
+  if(state.plat==="gpt"){
+    const live=/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname);
+    $("#fresh").innerHTML=GPT?`<span>ChatGPT ads · ${esc(GPT.account.name)}</span><span>Read from ChatGPT Ads <b>${esc(whenText(GPT.pulledAt.replace(" ","T")))}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${live?`<a class="refresh" href="api/rebuild">Refresh from ${srcText}</a>`:""}`
+      :`<span>ChatGPT ads could not be read</span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>`;
+    return;
+  }
   if(state.plat==="meta"){
     const live=/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname);
-    $("#fresh").innerHTML=META?`<span>Meta ads · <b>active now</b> · ${esc(META.account.name)}</span><span>Read from Meta <b>${esc(whenText(META.pulledAt.replace(" ","T")))}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${live?`<a class="refresh" href="api/rebuild">Refresh from Google Ads and Meta</a>`:""}`
+    $("#fresh").innerHTML=META?`<span>Meta ads · <b>active now</b> · ${esc(META.account.name)}</span><span>Read from Meta <b>${esc(whenText(META.pulledAt.replace(" ","T")))}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${live?`<a class="refresh" href="api/rebuild">Refresh from ${srcText}</a>`:""}`
       :`<span>Meta ads could not be read</span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>`;
     return;
   }
   const exp=new Date(DATA.exportedAt.replace(" ","T"));
   const when=isNaN(exp)?DATA.exportedAt:exp.toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
-  $("#fresh").innerHTML=`<span>Google combinations · <b>${esc(DATA.dateRange)}</b></span><span>Exported from Google Ads <b>${esc(when)}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname)?`<a class="refresh" href="api/rebuild">Refresh from ${DATA.source==="api"?"Google Ads":"sheet"}${hasMeta?" and Meta":""}</a>`:""}`;
+  $("#fresh").innerHTML=`<span>Google combinations · <b>${esc(DATA.dateRange)}</b></span><span>Exported from Google Ads <b>${esc(when)}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname)?`<a class="refresh" href="api/rebuild">Refresh from ${DATA.source==="api"?srcText:["sheet",...sources.slice(1)].join(" and ")}</a>`:""}`;
 }
 function render(){
-  const meta=state.plat==="meta";
-  if(hasMeta)$("#f-plat").innerHTML=[["google","Google"],["meta","Meta"]].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${state.plat===v}">${PLAT_ICON[v]}${l}</button>`).join("");
-  $("#f-plat").hidden=!hasMeta;
-  ["#f-account","#f-kind",".check","#sumBtn"].forEach(s=>$(s).hidden=meta);$("#f-mfmt").hidden=!meta;
-  $("#f-q").placeholder=meta?"Search primary text, headlines, ad names":"Search headlines, descriptions, ad groups";
+  const meta=state.plat==="meta",gpt=state.plat==="gpt",other=meta||gpt;
+  const plats=[["google","Google"],hasMeta?["meta","Meta"]:null,hasGpt?["gpt","ChatGPT"]:null].filter(Boolean);
+  if(plats.length>1)$("#f-plat").innerHTML=plats.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${state.plat===v}">${PLAT_ICON[v]}${l}</button>`).join("");
+  $("#f-plat").hidden=plats.length<2;
+  ["#f-account","#f-kind",".check","#sumBtn"].forEach(s=>$(s).hidden=other);$("#f-mfmt").hidden=!other;
+  $("#f-mfmt").setAttribute("aria-label",gpt?"Status":"Format");
+  $("#f-q").placeholder=meta?"Search primary text, headlines, ad names":gpt?"Search titles, text, ad names":"Search headlines, descriptions, ad groups";
   renderHeader();
   if(meta)return mRender();
+  if(gpt)return gRender();
   const accts=[...new Set(ads.map(a=>a.account))].sort();
   segBtns($("#f-account"),[["All","All accounts"],...accts.map(a=>[a,a])],"account");
   segBtns($("#f-kind"),[["All","All types"],["RSA","Search"],["PMAX","PMax"],["DG","Demand Gen"]],"kind");
@@ -951,10 +1070,12 @@ function render(){
 $("#f-campaign").onchange=e=>{state.campaign=e.target.value;render()};
 $("#f-q").oninput=e=>{state.q=e.target.value;render()};
 $("#f-unserved").onchange=e=>{state.unserved=e.target.checked;render()};
-const hm=location.hash.match(/^#ad-(.+)$/),mm=location.hash.match(/^#meta-(.+)$/);
+const hm=location.hash.match(/^#ad-(.+)$/),mm=location.hash.match(/^#meta-(.+)$/),gm=location.hash.match(/^#gpt-(.+)$/);
 if(mm&&hasMeta){state.plat="meta";if(mads.some(a=>a.rawId===mm[1]))state.sel="meta:"+mm[1]}
+else if(gm&&hasGpt){state.plat="gpt";const g=gptAds.find(a=>a.rawId===gm[1]);if(g){state.sel=g.id;if(g.status!=="active")state.gstat="All"}}
 else if(hm&&ads.some(a=>a.id===hm[1]))state.sel=hm[1];
 else if(hasMeta&&store.get("plat","google")==="meta")state.plat="meta";
+else if(hasGpt&&store.get("plat","google")==="gpt")state.plat="gpt";
 if(state.plat==="google"&&!state.sel){const top=ads.filter(a=>a.served&&a.kind==="RSA").sort((a,b)=>b.impressions-a.impressions)[0];if(top)state.sel=top.id}
 render();
 
