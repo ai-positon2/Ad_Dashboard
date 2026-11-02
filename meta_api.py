@@ -289,6 +289,12 @@ def pull(client):
     except RuntimeError as e:
         log.append("The Advantage+ and optimization settings could not be read (%s), so they are not shown" % str(e)[:160])
         ads = api.pages(act + "/ads", {"fields": AD_FIELDS, "effective_status": json.dumps(["ACTIVE"]), "limit": 50})
+    if not ads:  # say what the account does hold, so "no ads" is not mistaken for a broken read
+        seen = _soft(log, "The ad statuses", lambda: api.pages(act + "/ads", {"fields": "effective_status", "limit": 200}, limit=2000), [])
+        by = {}
+        for a in seen:
+            by[a.get("effective_status") or "UNKNOWN"] = by.get(a.get("effective_status") or "UNKNOWN", 0) + 1
+        log.append("No active ads in this account; this token sees %d ads in all%s" % (len(seen), (" (" + ", ".join("%d %s" % (n, k.lower().replace("_", " ")) for k, n in sorted(by.items())) + ")") if by else ""))
     parsed = {a["id"]: creative_parts(a.get("creative")) for a in ads if a.get("id")}
 
     hashes = sorted({i["hash"] for p in parsed.values() for i in p["images"] + [c["image"] for c in p["cards"] if c.get("image")] if i.get("hash")})

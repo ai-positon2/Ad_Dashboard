@@ -816,7 +816,7 @@ const rdAds=((RD&&RD.ads)||[]).map(a=>Object.assign({},a,{rawId:a.id,id:"rd:"+a.
   text:[a.name,a.campaign,a.adset,a.headline,a.body,(a.cards||[]).map(c=>c.caption).join(" ")].join(" ").toLowerCase()}));
 Object.assign(state,{rstat:rdAds.some(a=>a.status==="active")?"active":"All",rview:store.get("rview","desktop")});
 function rPreview(ad){
-  const user=ad.profile||RD.account.name||DATA.client,icon=RD.account.icon;
+  const user=ad.profile||DATA.client,icon=RD.account.icon;
   const cta=c=>c?`<span class="rcta">${esc(c)}</span>`:"";
   let media="";
   if(ad.format==="carousel")media=`<div class="rcar">${ad.cards.map(c=>`<a class="rcard" href="${esc(c.link||ad.link||"#")}" target="_blank" rel="noopener">${c.image?`<img src="${esc(c.image)}" alt="">`:`<div class="ph">No picture</div>`}<div><b>${esc(c.caption||c.displayUrl||domainOf(c.link||ad.link))}</b>${cta(c.cta)}</div></a>`).join("")}</div>`;
