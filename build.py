@@ -617,7 +617,7 @@ def load_tables():
     return x, api_data
 
 
-def load_meta(assets, forced):
+def load_meta(assets, forced, logo=""):
     """The client's active Meta ads for the Meta view, pictures downloaded like Google's; (data, error). No meta_account_id: (None, "")."""
     if not CLIENT.get("meta_account_id"):
         return None, ""
@@ -636,7 +636,7 @@ def load_meta(assets, forced):
     for a in m["ads"]:
         ads.append(dict(a, images=[x for x in (local(u) for u in a["images"]) if x], videos=[dict(v, thumb=local(v["thumb"])) for v in a["videos"]],
                         cards=[dict(c, image=local(c["image"]), video=dict(c["video"], thumb=local(c["video"]["thumb"])) if c.get("video") else None) for c in a["cards"]],
-                        page=dict(a["page"], picture=local(a["page"]["picture"]), igPicture=local(a["page"]["igPicture"]))))
+                        page=dict(a["page"], picture=local(a["page"]["picture"]) or logo, igPicture=local(a["page"]["igPicture"]) or local(a["page"]["picture"]) or logo)))  # no page from Meta: the client's own logo
     print(f"Meta: {len(ads)} active ads read {m['pulledAt']}")
     return {"account": m["account"], "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
 
@@ -691,7 +691,7 @@ def main():
         "performance": build_performance(perf_tab),
         "perfExportedAt": first(perf_tab, "Exported at"),
     }
-    payload["meta"], payload["metaError"] = load_meta(assets, forced)
+    payload["meta"], payload["metaError"] = load_meta(assets, forced, logo=next((v for v in logos.values() if v), ""))
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8").replace("__CLIENT__", CLIENT["name"])
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)

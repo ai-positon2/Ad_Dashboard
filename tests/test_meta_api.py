@@ -24,7 +24,17 @@ CAROUSEL = {"object_story_spec": {"page_id": "111", "link_data": {"message": "Th
     {"name": "Clip", "link": "https://soteriskin.com/c", "video_id": "901", "picture": "https://x/c.jpg"}]}}}
 FLEX = {"object_story_spec": {"page_id": "111"}, "asset_feed_spec": {"bodies": [{"text": "Body A"}, {"text": "Body B"}], "titles": [{"text": "Title A"}], "descriptions": [{"text": "Desc"}],
                                                                        "images": [{"hash": "h3"}, {"hash": "h4"}], "videos": [{"video_id": "902", "thumbnail_url": "https://x/v.jpg"}],
-                                                                       "call_to_action_types": ["SIGN_UP"], "link_urls": [{"website_url": "https://soteriskin.com/join"}]}}
+                                                                       "call_to_action_types": ["SIGN_UP"], "link_urls": [{"website_url": "https://soteriskin.com/join"}], "ad_formats": ["AUTOMATIC_FORMAT"]}}
+# a single image with a 9:16 version for Stories and Reels and two text options, as Ads Manager sets it up (asset feed + placement rules)
+SINGLE = {"object_story_spec": {"page_id": "111"}, "asset_feed_spec": {
+    "ad_formats": ["SINGLE_IMAGE"], "bodies": [{"text": "Text one"}, {"text": "Text two"}], "titles": [{"text": "Clinically proven"}],
+    "images": [{"hash": "sq", "adlabels": [{"name": "feed_img"}]}, {"hash": "tall", "adlabels": [{"name": "story_img"}]}],
+    "asset_customization_rules": [
+        {"customization_spec": {"publisher_platforms": ["facebook", "instagram"], "facebook_positions": ["story", "facebook_reels"], "instagram_positions": ["story", "reels"]}, "image_label": {"name": "story_img"}, "priority": 1},
+        {"customization_spec": {"publisher_platforms": ["facebook", "instagram"], "facebook_positions": ["feed"], "instagram_positions": ["stream"]}, "image_label": {"name": "feed_img"}, "priority": 2}]},
+    "degrees_of_freedom_spec": {"creative_features_spec": {"image_touchups": {"enroll_status": "OPT_IN"}, "inline_comment": {"enroll_status": "OPT_IN"}, "image_templates": {"enroll_status": "OPT_IN"},
+                                                          "enhance_cta": {"enroll_status": "OPT_OUT"}, "image_brightness_and_contrast": {"enroll_status": "OPT_OUT"}, "brand_new_thing": {"enroll_status": "OPT_OUT"}}},
+    "contextual_multi_ads": {"enroll_status": "OPT_OUT"}}
 
 
 def test_an_image_ad_keeps_its_words_line_breaks_picture_button_and_link():
@@ -42,7 +52,24 @@ def test_a_video_a_carousel_and_a_flexible_ad_are_told_apart():
     assert c["cards"][1]["image"] == {"url": "https://x/p.jpg"} and c["cards"][2]["video"] == {"id": "901", "thumb": "https://x/c.jpg"} and c["cards"][0]["cta"] == "SHOP_NOW"
     f = meta_api.creative_parts(FLEX)
     assert f["format"] == "flexible" and f["primary"] == ["Body A", "Body B"] and f["images"] == [{"hash": "h3"}, {"hash": "h4"}] and f["cta"] == "SIGN_UP" and f["link"] == "https://soteriskin.com/join"
+    assert meta_api.creative_parts(dict(FLEX, asset_feed_spec=dict(FLEX["asset_feed_spec"], ad_formats=[])))["format"] == "image"
     assert meta_api.creative_parts({"video_id": "5", "thumbnail_url": "t"})["format"] == "video" and meta_api.creative_parts({})["format"] == "image"
+
+
+def test_a_single_image_with_a_stories_version_is_a_single_image_with_its_placement_pictures():
+    p = meta_api.creative_parts(SINGLE)
+    assert p["format"] == "image" and p["images"] == [{"hash": "sq"}, {"hash": "tall"}] and p["primary"] == ["Text one", "Text two"]
+    assert p["slots"] == {"story": {"kind": "image", "i": 1}, "feed": {"kind": "image", "i": 0}}
+
+
+def test_advantage_plus_enhancements_and_delivery_settings_are_in_ads_managers_words():
+    e = meta_api.enhancements(SINGLE)
+    assert e == {"on": ["Add overlays", "Relevant comments", "Visual touch-ups"], "off": ["Adjust brightness and contrast", "Brand new thing", "Enhance CTA"], "multiAdvertiser": "off"}
+    assert meta_api.enhancements({}) == {"on": [], "off": [], "multiAdvertiser": ""}
+    o = meta_api.optimization({"adset": {"optimization_goal": "OFFSITE_CONVERSIONS", "bid_strategy": "COST_CAP", "targeting": {"targeting_automation": {"advantage_audience": 1}}},
+                               "campaign": {"daily_budget": "5000", "smart_promotion_type": "GUIDED_CREATION"}})
+    assert o == {"goal": "Conversions", "bid": "Cost per result goal", "campaignBudget": True, "audience": "on", "shopping": False}
+    assert meta_api.optimization({"campaign": {"bid_strategy": "LOWEST_COST_WITHOUT_CAP"}})["bid"] == "Highest volume"
 
 
 def test_placements_chosen_or_automatic():
@@ -105,11 +132,27 @@ def test_a_part_meta_refuses_is_logged_and_the_rest_still_reads():
     orig = meta_api.Api
     meta_api.Api = lambda: fake
     try:
-        out = meta_api.pull({"meta_account_id": "act_261215873024315"})
+        out = meta_api.pull({"meta_account_id": "act_261215873024315", "name": "Soteri Skin"})
     finally:
         meta_api.Api = orig
-    assert len(out["ads"]) == 2 and all(a["previews"] == [] for a in out["ads"]) and out["ads"][0]["page"]["name"] == "Soteri Skin"
+    assert len(out["ads"]) == 2 and all(a["previews"] == [] for a in out["ads"]) and out["ads"][0]["page"]["name"] == "Soteri Skin" and out["ads"][0]["page"]["picture"] == ""
     assert any("preview links" in m for m in out["log"]) and any("Facebook page 111" in m for m in out["log"])
+
+
+def test_when_meta_refuses_the_extra_fields_the_ads_are_read_without_them():
+    class Picky(FakeGraph):
+        def pages(self, path, params, limit=meta_api.MAX_ADS):
+            if path.endswith("/ads") and "degrees_of_freedom_spec" in params["fields"]:
+                raise RuntimeError("Meta answered 400: (#100) Tried accessing nonexisting field (contextual_multi_ads)")
+            return super().pages(path, params, limit)
+    fake = Picky()
+    orig = meta_api.Api
+    meta_api.Api = lambda: fake
+    try:
+        out = meta_api.pull({"meta_account_id": "261215873024315"})
+    finally:
+        meta_api.Api = orig
+    assert len(out["ads"]) == 2 and out["ads"][0]["enhancements"] == {"on": [], "off": [], "multiAdvertiser": ""} and "Advantage+" in out["log"][0]
 
 
 def test_without_a_token_or_an_account_nothing_is_read():

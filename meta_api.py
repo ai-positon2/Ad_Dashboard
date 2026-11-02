@@ -28,12 +28,35 @@ from html import unescape
 import gads_api
 
 GRAPH = "https://graph.facebook.com/" + os.environ.get("META_API_VERSION", "v23.0").strip()
-CACHE_VERSION = 1
+CACHE_VERSION = 2              # 2: the real format, placement pictures, Advantage+ and optimization settings
 MAX_ADS = 300
 PREVIEW_FORMATS = (("MOBILE_FEED_STANDARD", "Facebook feed"), ("INSTAGRAM_STANDARD", "Instagram feed"), ("INSTAGRAM_STORY", "Instagram Story"))
 AD_FIELDS = ("id,name,effective_status,created_time,campaign{id,name,objective},adset{id,name,targeting},"
              "creative{id,name,object_type,title,body,image_url,image_hash,thumbnail_url,video_id,call_to_action_type,link_url,"
              "object_story_spec,asset_feed_spec,instagram_permalink_url,effective_object_story_id}")
+# the settings read on top: Advantage+ creative enhancements and multi-advertiser ads, the ad set's goal and bid, the campaign's budget. A field Meta refuses
+# for an account drops these extras (the ads are read with AD_FIELDS) and says so, never the ads.
+EXTRA_FIELDS = ("id,name,effective_status,created_time,campaign{id,name,objective,daily_budget,lifetime_budget,bid_strategy,smart_promotion_type},"
+                "adset{id,name,targeting,optimization_goal,bid_strategy,billing_event,destination_type,daily_budget,lifetime_budget},"
+                "creative{id,name,object_type,title,body,image_url,image_hash,thumbnail_url,video_id,call_to_action_type,link_url,"
+                "object_story_spec,asset_feed_spec,instagram_permalink_url,effective_object_story_id,degrees_of_freedom_spec,contextual_multi_ads}")
+# Meta's API names for the Advantage+ creative enhancements, in the words Ads Manager uses; a name not here is shown in plain words
+FEATURES = {"standard_enhancements": "Standard enhancements", "image_touchups": "Visual touch-ups", "image_templates": "Add overlays", "add_text_overlay": "Add text overlays",
+            "image_brightness_and_contrast": "Adjust brightness and contrast", "enhance_cta": "Enhance CTA", "inline_comment": "Relevant comments",
+            "text_optimizations": "Text improvements", "text_generation": "Text generation", "product_extensions": "Add catalog items", "product_metadata_automation": "Add product tags",
+            "image_uncrop": "Expand image", "image_animation": "Image animation", "image_background_gen": "Generate backgrounds", "video_auto_crop": "Video auto-crop",
+            "adapt_to_placement": "Adapt to placement", "description_automation": "Add descriptions", "reveal_details_over_time": "Reveal details over time",
+            "site_extensions": "Add site links", "music": "Add music", "audio": "Add music", "advantage_plus_creative": "Advantage+ creative", "show_summary": "Show summary",
+            "show_destination_blurbs": "Show destination details", "cv_transformation": "Visual enhancements", "media_type_automation": "Dynamic media",
+            "pac_relaxation": "Use assets across placements", "multi_photo_to_video": "Turn images into a video", "translate_text": "Translate text", "3d_animation": "3D animation",
+            "creative_stickers": "Stickers", "biz_ai": "Business AI", "hide_price": "Hide price", "local_store_extension": "Show local store details",
+            "add_stickers": "Add stickers", "ig_video_native_subtitle": "Instagram captions", "image_auto_crop": "Image auto-crop", "profile_card": "Profile card",
+            "summary_sticker": "Summary sticker", "carousel_to_video": "Carousel to video", "dha_optimization": "Dynamic ad optimization"}
+GOALS = {"OFFSITE_CONVERSIONS": "Conversions", "LINK_CLICKS": "Link clicks", "LANDING_PAGE_VIEWS": "Landing page views", "IMPRESSIONS": "Impressions", "REACH": "Reach",
+         "THRUPLAY": "ThruPlay", "VALUE": "Conversion value", "LEAD_GENERATION": "Leads", "QUALITY_LEAD": "Quality leads", "POST_ENGAGEMENT": "Post engagement",
+         "AD_RECALL_LIFT": "Ad recall lift", "CONVERSATIONS": "Conversations", "APP_INSTALLS": "App installs", "PAGE_LIKES": "Page likes", "TWO_SECOND_CONTINUOUS_VIDEO_VIEWS": "2-second video views"}
+BIDS = {"LOWEST_COST_WITHOUT_CAP": "Highest volume", "LOWEST_COST_WITH_BID_CAP": "Bid cap", "COST_CAP": "Cost per result goal", "LOWEST_COST_WITH_MIN_ROAS": "ROAS goal",
+        "TARGET_COST": "Target cost"}
 CTA = {"LEARN_MORE": "Learn more", "SHOP_NOW": "Shop now", "SIGN_UP": "Sign up", "BOOK_NOW": "Book now", "BOOK_TRAVEL": "Book now", "CONTACT_US": "Contact us",
        "GET_QUOTE": "Get quote", "APPLY_NOW": "Apply now", "DOWNLOAD": "Download", "GET_OFFER": "Get offer", "SUBSCRIBE": "Subscribe", "CALL_NOW": "Call now",
        "MESSAGE_PAGE": "Send message", "SEND_MESSAGE": "Send message", "WHATSAPP_MESSAGE": "Send WhatsApp message", "WATCH_MORE": "Watch more", "ORDER_NOW": "Order now",
@@ -149,8 +172,17 @@ def creative_parts(cr):
         cards.append(card)
     for key, out in (("bodies", primary), ("titles", headline), ("descriptions", description)):
         out += [(_multiline if key == "bodies" else _txt)(i.get("text") if isinstance(i, dict) else i) for i in feed.get(key) or []]
-    images += [{"hash": i["hash"]} if i.get("hash") else {"url": i.get("url")} for i in feed.get("images") or [] if isinstance(i, dict) and (i.get("hash") or i.get("url"))]
-    videos += [{"id": str(v["video_id"]), "thumb": v.get("thumbnail_url") or ""} for v in feed.get("videos") or [] if isinstance(v, dict) and v.get("video_id")]
+    labelled = {}
+    for i in feed.get("images") or []:
+        if isinstance(i, dict) and (i.get("hash") or i.get("url")):
+            images.append({"hash": i["hash"]} if i.get("hash") else {"url": i.get("url")})
+            for lab in i.get("adlabels") or []:
+                labelled[("image", lab.get("name"))] = ("image", len(images) - 1)
+    for v in feed.get("videos") or []:
+        if isinstance(v, dict) and v.get("video_id"):
+            videos.append({"id": str(v["video_id"]), "thumb": v.get("thumbnail_url") or ""})
+            for lab in v.get("adlabels") or []:
+                labelled[("video", lab.get("name"))] = ("video", len(videos) - 1)
     if not images and not videos and not cards:
         if cr.get("video_id"):
             videos.append({"id": str(cr["video_id"]), "thumb": cr.get("thumbnail_url") or ""})
@@ -163,8 +195,15 @@ def creative_parts(cr):
            or cr.get("call_to_action_type") or (cta_types[0] if cta_types else ""))
     links = [(link.get("call_to_action") or {}).get("value", {}).get("link"), link.get("link"), (video.get("call_to_action") or {}).get("value", {}).get("link"),
              cr.get("link_url")] + [u.get("website_url") for u in feed.get("link_urls") or [] if isinstance(u, dict)]
-    if feed:
+    ad_formats = [str(x).upper() for x in feed.get("ad_formats") or []]
+    if feed and "AUTOMATIC_FORMAT" in ad_formats:                               # Meta's flexible format: it picks the format and the mix itself
         fmt = "flexible"
+    elif feed and any("CAROUSEL" in x for x in ad_formats):
+        fmt = "carousel"
+    elif feed and ("SINGLE_VIDEO" in ad_formats or (videos and not images)):
+        fmt = "video"
+    elif feed:
+        fmt = "image"                                                          # SINGLE_IMAGE: one picture, perhaps a second for Stories and Reels
     elif tmpl:
         fmt = "catalog"
     elif len(cards) > 1:
@@ -173,8 +212,48 @@ def creative_parts(cr):
         fmt = "video"
     else:
         fmt = "image"
-    return {"format": fmt, "primary": _uniq(primary), "headline": _uniq(headline), "description": _uniq(description), "images": images, "videos": videos, "cards": cards,
+    return {"format": fmt, "slots": placement_media(feed, labelled), "primary": _uniq(primary), "headline": _uniq(headline), "description": _uniq(description), "images": images, "videos": videos, "cards": cards,
             "cta": str(cta or "").upper(), "link": next((u for u in links if u), ""), "page_id": str(story.get("page_id") or ""), "ig_id": str(story.get("instagram_user_id") or story.get("instagram_actor_id") or "")}
+
+
+def placement_media(feed, labelled):
+    """{feed|story: {kind, i}}: which picture or video an ad shows in feeds and in Stories and Reels, from its placement rules (a 9:16 version for Stories is the usual case)."""
+    out = {}
+    rules = sorted((r for r in feed.get("asset_customization_rules") or [] if isinstance(r, dict)), key=lambda r: r.get("priority") or 0)
+    for r in rules:
+        spec = r.get("customization_spec") or {}
+        positions = [str(x).lower() for k in ("facebook_positions", "instagram_positions", "messenger_positions", "audience_network_positions") for x in spec.get(k) or []]
+        slot = "story" if positions and all(("story" in x or "reels" in x) for x in positions) else "feed"
+        for kind in ("image", "video"):
+            hit = labelled.get((kind, (r.get(kind + "_label") or {}).get("name")))
+            if hit and slot not in out:
+                out[slot] = {"kind": hit[0], "i": hit[1]}
+    return out
+
+
+def enhancements(cr):
+    """{on: [], off: [], multiAdvertiser: on|off|""}: the Advantage+ creative enhancements of a creative, in Ads Manager's words."""
+    spec = ((cr or {}).get("degrees_of_freedom_spec") or {}).get("creative_features_spec") or {}
+    on, off = [], []
+    for k, v in spec.items():
+        status = str((v or {}).get("enroll_status") or "").upper() if isinstance(v, dict) else ""
+        label = FEATURES.get(k, k.replace("_", " ").capitalize())
+        if status == "OPT_IN":
+            on.append(label)
+        elif status == "OPT_OUT":
+            off.append(label)
+    multi = str(((cr or {}).get("contextual_multi_ads") or {}).get("enroll_status") or "").upper()
+    return {"on": _uniq(sorted(on)), "off": _uniq(sorted(off)), "multiAdvertiser": "on" if multi == "OPT_IN" else "off" if multi == "OPT_OUT" else ""}
+
+
+def optimization(ad):
+    """The delivery settings of an ad's ad set and campaign, in Ads Manager's words."""
+    ads_, camp = ad.get("adset") or {}, ad.get("campaign") or {}
+    auto = ((ads_.get("targeting") or {}).get("targeting_automation") or {}).get("advantage_audience")
+    goal, bid = str(ads_.get("optimization_goal") or ""), str(ads_.get("bid_strategy") or camp.get("bid_strategy") or "")
+    return {"goal": GOALS.get(goal, goal.replace("_", " ").capitalize()), "bid": BIDS.get(bid, bid.replace("_", " ").capitalize()),
+            "campaignBudget": bool(camp.get("daily_budget") or camp.get("lifetime_budget")), "audience": "on" if auto == 1 else "off" if auto == 0 else "",
+            "shopping": str(camp.get("smart_promotion_type") or "").upper() == "AUTOMATED_SHOPPING_ADS"}
 
 
 def placements(adset):
@@ -205,7 +284,11 @@ def pull(client):
         raise RuntimeError("no meta_account_id for this client")
     api, log, t0 = Api(), [], time.time()
     account = api.get(act, {"fields": "name,currency,account_status"})
-    ads = api.pages(act + "/ads", {"fields": AD_FIELDS, "effective_status": json.dumps(["ACTIVE"]), "limit": 50})
+    try:
+        ads = api.pages(act + "/ads", {"fields": EXTRA_FIELDS, "effective_status": json.dumps(["ACTIVE"]), "limit": 50})
+    except RuntimeError as e:
+        log.append("The Advantage+ and optimization settings could not be read (%s), so they are not shown" % str(e)[:160])
+        ads = api.pages(act + "/ads", {"fields": AD_FIELDS, "effective_status": json.dumps(["ACTIVE"]), "limit": 50})
     parsed = {a["id"]: creative_parts(a.get("creative")) for a in ads if a.get("id")}
 
     hashes = sorted({i["hash"] for p in parsed.values() for i in p["images"] + [c["image"] for c in p["cards"] if c.get("image")] if i.get("hash")})
@@ -267,7 +350,8 @@ def pull(client):
             "cards": [dict(c, image=resolve(c["image"]) if c.get("image") else "", video=dict(c["video"], thumb=vthumb(c["video"])) if c.get("video") else None,
                            ctaText=CTA.get(c["cta"], c["cta"].replace("_", " ").capitalize()) if c.get("cta") else "") for c in p["cards"]],
             "cta": p["cta"], "ctaText": CTA.get(p["cta"], p["cta"].replace("_", " ").capitalize()), "link": p["link"],
-            "page": {"name": pg.get("name") or account.get("name") or "", "picture": pg.get("picture") or "", "ig": pg.get("ig") or "", "igPicture": pg.get("igPicture") or ""},
+            "page": {"name": pg.get("name") or client.get("name") or account.get("name") or "", "picture": pg.get("picture") or "", "ig": pg.get("ig") or "", "igPicture": pg.get("igPicture") or ""},
+            "slots": p["slots"], "enhancements": enhancements(a.get("creative")), "optimization": optimization(a),
             "previews": prevs.get(a["id"]) or [], "igPermalink": (a.get("creative") or {}).get("instagram_permalink_url") or "",
         })
     now = datetime.now().strftime("%Y-%m-%d %H:%M")

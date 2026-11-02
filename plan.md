@@ -237,3 +237,9 @@ A Google | Meta switch under the dashboard name, for clients with `meta_account_
   images, videos (play on Facebook). Comments work on Meta ads (`meta:<ad id>`).
 - Tested: `tests/test_meta_api.py` (creative shapes, a whole pull against a fake Graph API, refused parts) and a local Soteri build with sample Meta ads.
   The live Meta read is checked after deploy (no token on the dev machine).
+- (same day, after the first live read: 83 ads, 4 campaigns) Format now comes from Meta's own `asset_feed_spec.ad_formats` (AUTOMATIC_FORMAT is flexible; SINGLE_IMAGE /
+  SINGLE_VIDEO are single image / video even with several text options), so 73 ads no longer show as flexible. A single ad's Stories and Reels picture
+  (placement rules, `asset_customization_rules`) is used in the Story preview; its text options are stepped through. Advantage+ creative enhancements
+  (`degrees_of_freedom_spec`), multi-advertiser ads, optimization goal, bid strategy, campaign budget, Advantage+ audience and placements are shown;
+  if Meta refuses those fields the ads are read without them. Meta refused the Facebook page for this token, so the page name falls back to the client
+  name and the picture to the client's Google logo.

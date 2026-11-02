@@ -522,7 +522,8 @@ function mCombos(ad){
     if(ad.format==="carousel"&&ad.cards.length)out.push({media:"cards",primary:P[0],headline:H[0],description:D});
     else{
       const M=[...ad.images.map(img=>({media:"image",img})),...ad.videos.map(v=>({media:"video",img:v.thumb,url:v.url}))];
-      (M.length?M:[{media:"none"}]).forEach(m=>P.forEach(p=>H.forEach(h=>{if(out.length<12)out.push(Object.assign({primary:p,headline:h,description:D},m))})));
+      const flex=ad.format==="flexible";
+      (flex&&M.length?M:[M[0]||{media:"none"}]).forEach(m=>P.forEach(p=>H.forEach(h=>{if(out.length<12)out.push(Object.assign({primary:p,headline:h,description:D,placed:!flex},m))})));
     }
     ad._mc=out;
   }
@@ -568,8 +569,14 @@ function igStory(ad,c){
     <div class="mh">${mAvatar(ad,true)}<div><div class="pn">${esc(who)}</div><div class="sp">Sponsored</div></div></div>
     ${c.primary?`<div class="cap">${esc(c.primary)}</div>`:""}<span class="scta">${esc(ad.ctaText||"Learn more")}</span></div>`;
 }
+function slotMedia(ad,slot){  /* the picture or video Meta shows in this placement (a 9:16 version for Stories and Reels), when the ad sets one */
+  const s=(ad.slots||{})[slot];if(!s)return null;
+  if(s.kind==="image"&&ad.images[s.i])return {media:"image",img:ad.images[s.i]};
+  const v=s.kind==="video"&&ad.videos[s.i];return v?{media:"video",img:v.thumb,url:v.url}:null;
+}
 function mPreview(ad,c){
   if(!c)return `<div class="empty">This ad has nothing to preview.</div>`;
+  if(c.placed){const m=slotMedia(ad,state.mplace==="story"?"story":"feed");if(m)c=Object.assign({},c,{media:m.media,img:m.img,url:m.url})}
   return({fb:fbFeed,ig:igFeed,story:igStory}[state.mplace]||fbFeed)(ad,c);
 }
 function mPlacementText(ad){const p=ad.placements||{};return p.automatic?"Automatic placements (Facebook, Instagram, Messenger, Audience Network)":(p.networks||[]).map(n=>MNET[n]||n).join(", ")}
@@ -594,8 +601,18 @@ function mAssets(ad){
   const cards=ad.cards.map(k=>({x:k.headline||"(no headline)",l:[k.description,k.link?domainOf(k.link):""].filter(Boolean)}));
   const text=`<div class="agrid">${textList("Primary text",ad.primary,MLIMIT.primary)}${textList("Headlines",ad.headline,MLIMIT.headline)}<div class="acol">${textList("Descriptions",ad.description,MLIMIT.description)}${commentBox(ad)}</div>${detailList("Carousel cards",cards)}${chipList("Button",ad.ctaText?[ad.ctaText]:[])}${chipList("Placements",[mPlacementText(ad)])}${chipList("Format",[MFMT[ad.format]||ad.format])}${ad.objective?chipList("Campaign objective",[prettyCta(ad.objective.replace(/^OUTCOME_/,""))]):""}</div>`;
   const vids=ad.videos.map(v=>`<figure>${v.url?`<a href="${esc(v.url)}" target="_blank" rel="noopener" title="Play on Facebook">`:""}${v.thumb?`<img src="${esc(v.thumb)}" alt="Video">`:`<div class="ph" style="height:96px;width:140px;border-radius:6px">Video</div>`}${v.url?"</a>":""}<figcaption>${v.length?Math.round(v.length)+" s":"Video"}${v.url?" · play on Facebook ↗":""}</figcaption></figure>`).join("");
-  const media=gallery("Images",ad.images.map(i=>({img:i})))+(vids?`<section class="aset wide"><h3>Videos <span class="n">${ad.videos.length}</span></h3><div class="gallery">${vids}</div></section>`:"")+gallery("Carousel pictures",ad.cards.filter(k=>k.image).map(k=>({img:k.image})));
-  return `<div class="phead"><h3>Live assets</h3><span class="src">Read from Meta ${esc(META.pulledAt)}</span></div>${text}${media?`<div class="agrid media">${media}</div>`:""}`;
+  const slotOf=i=>{const s=ad.slots||{};return s.story&&s.story.kind==="image"&&s.story.i===i?"Stories and Reels":s.feed&&s.feed.kind==="image"&&s.feed.i===i&&s.story?"Feeds":""};
+  const media=gallery("Images",ad.images.map((img,i)=>({img,f:slotOf(i)})))+(vids?`<section class="aset wide"><h3>Videos <span class="n">${ad.videos.length}</span></h3><div class="gallery">${vids}</div></section>`:"")+gallery("Carousel pictures",ad.cards.filter(k=>k.image).map(k=>({img:k.image})));
+  return `<div class="phead"><h3>Live assets</h3><span class="src">Read from Meta ${esc(META.pulledAt)}</span></div>${text}${media?`<div class="agrid media">${media}</div>`:""}${mSettings(ad)}`;
+}
+function mSettings(ad){
+  const e=ad.enhancements,o=ad.optimization;if(!e&&!o)return "";
+  const yes=v=>v==="on"?"On":v==="off"?"Off":"";
+  const deliv=[o&&o.goal?["Optimised for",o.goal]:null,o&&o.bid?["Bid strategy",o.bid]:null,o?["Budget",o.campaignBudget?"Advantage+ campaign budget (set on the campaign)":"Set on the ad set"]:null,
+    ["Placements",ad.placements&&ad.placements.automatic?"Advantage+ placements":"Manual: "+mPlacementText(ad)],o&&o.audience?["Advantage+ audience",yes(o.audience)]:null,
+    e&&e.multiAdvertiser?["Multi-advertiser ads",yes(e.multiAdvertiser)]:null,o&&o.shopping?["Campaign","Advantage+ shopping campaign"]:null].filter(Boolean);
+  return `<div class="agrid media"><section class="aset wide"><h3>Advantage+ and optimizations</h3><ul class="slist">${deliv.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul></section>
+    ${e&&(e.on.length||e.off.length)?chipList("Creative enhancements turned on",e.on)+chipList("Creative enhancements turned off",e.off):e?`<section class="aset"><h3>Creative enhancements</h3><p class="csub">None set on this ad.</p></section>`:""}</div>`;
 }
 function mRenderDetail(){
   const el=$("#detail");
@@ -604,10 +621,12 @@ function mRenderDetail(){
   if(!ad){el.innerHTML=`<div class="panel empty">${mads.length?"Pick an ad on the left to see its previews.":"There are no active Meta ads in this account right now."}</div>`;return}
   const combos=mCombos(ad);if(state.combo>=combos.length)state.combo=0;
   const c=combos[state.combo];
-  const note=ad.format==="flexible"?`A flexible ad: Meta mixes these texts and pictures itself and does not report which mix it shows, so these are ${combos.length} of the combinations it can make.`
+  const slotNote=ad.slots&&ad.slots.story&&ad.slots.feed?" It has its own picture for Stories and Reels, shown in the Instagram Story preview.":"";
+  const textNote=combos.length>1&&ad.format!=="flexible"?` Meta tries its ${ad.primary.length>1?ad.primary.length+" primary texts":""}${ad.primary.length>1&&ad.headline.length>1?" and ":""}${ad.headline.length>1?ad.headline.length+" headlines":""} on each person and does not report which one it shows, so the list on the right steps through them.`:"";
+  const note=ad.format==="flexible"?`Flexible format: Meta picks the format and mixes these texts and pictures itself, and does not report which mix it shows, so these are ${combos.length} of the combinations it can make.`
     :ad.format==="carousel"?"A carousel: scroll the cards in the Facebook preview. Instagram shows the first card here."
-    :"Drawn from the ad as it is set up in Meta now.";
-  const clist=combos.length>1?combos.map((x,i)=>`<button type="button" class="combo" data-i="${i}" aria-pressed="${i===state.combo}"><span class="rk">#${i+1}</span><span class="tx">${esc(x.headline||"(no headline)")}${x.primary?`<span class="d"> · ${esc(x.primary)}</span>`:""}</span><span class="im">${esc(x.media==="video"?"Video"+(ad.videos.length>1?" "+(ad.videos.findIndex(v=>v.thumb===x.img)+1):""):x.media==="image"?"Image"+(ad.images.length>1?" "+(ad.images.indexOf(x.img)+1):""):"")}</span></button>`).join(""):"";
+    :`${MFMT[ad.format]||"An ad"}, drawn from the ad as it is set up in Meta now.${slotNote}${textNote}`;
+  const clist=combos.length>1?combos.map((x,i)=>`<button type="button" class="combo" data-i="${i}" aria-pressed="${i===state.combo}"><span class="rk">#${i+1}</span><span class="tx">${esc(x.headline||"(no headline)")}${x.primary?`<span class="d"> · ${esc(x.primary)}</span>`:""}</span><span class="im">${esc(x.placed?"":x.media==="video"?"Video"+(ad.videos.length>1?" "+(ad.videos.findIndex(v=>v.thumb===x.img)+1):""):x.media==="image"?"Image"+(ad.images.length>1?" "+(ad.images.indexOf(x.img)+1):""):"")}</span></button>`).join(""):"";
   el.innerHTML=`
   <div class="panel">
     <div class="crumb"><span>${esc(META.account.name)}</span><span>${esc(ad.campaign)}</span><span>${esc(ad.adset)}</span></div>
@@ -621,9 +640,9 @@ function mRenderDetail(){
     ${mPreviewButtons(ad)}
     <div class="pgrid">
       <div><div class="stage">${mPreview(ad,c)}</div>
-        ${combos.length>1?`<div class="stepper"><button type="button" data-step="-1" aria-label="Previous combination">‹</button><span>Combination <b class="mono">${state.combo+1}</b> of <b class="mono">${combos.length}</b></span><button type="button" data-step="1" aria-label="Next combination">›</button></div>`:""}
+        ${combos.length>1?`<div class="stepper"><button type="button" data-step="-1" aria-label="Previous combination">‹</button><span>${ad.format==="flexible"?"Combination":"Text option"} <b class="mono">${state.combo+1}</b> of <b class="mono">${combos.length}</b></span><button type="button" data-step="1" aria-label="Next combination">›</button></div>`:""}
       </div>
-      <div><h3>${combos.length>1?"Combinations":"Placements"}</h3>${clist?`<div class="combos">${clist}</div>`:`<p class="csub">${esc(mPlacementText(ad))}</p>`}</div>
+      <div><h3>${combos.length>1?(ad.format==="flexible"?"Combinations":"Text options"):"Placements"}</h3>${clist?`<div class="combos">${clist}</div>`:`<p class="csub">${esc(mPlacementText(ad))}</p>`}</div>
     </div>
   </div>
   <div class="panel">${mAssets(ad)}</div>`;
