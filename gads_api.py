@@ -37,7 +37,7 @@ ROOT = Path(__file__).parent
 _VOLUME = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
 CACHE_DIR = Path(os.environ.get("GADS_CACHE_DIR") or (Path(_VOLUME) / "gads_cache" if _VOLUME else ROOT / "cache"))
 CACHE_HOURS = float(os.environ.get("GADS_CACHE_HOURS", "12"))
-CACHE_VERSION = 2  # bump when the pulled data gains a field, so older caches are discarded instead of reused
+CACHE_VERSION = 3  # bump when the pulled data gains a field, so older caches are discarded instead of reused (3: image extensions Google will not show are left out)
 MIN_REFRESH_MINUTES = float(os.environ.get("GADS_MIN_REFRESH_MINUTES", "10"))  # floor between manual refreshes
 FORCE = threading.Event()  # set by the dashboard's "Refresh" link: pull again even inside the cache window
 
@@ -503,8 +503,11 @@ def live_assets(api, acct, now, log):
         camel = re.sub(r"_([a-z])", lambda m: m.group(1).upper(), res)
 
         def ext(level=level, res=res, sel=sel, where=where, camel=camel):
-            for r in api.search(cid, f"SELECT {sel}{res}.field_type, {ASSET_SELECT} FROM {res} "
+            for r in api.search(cid, f"SELECT {sel}{res}.field_type, {res}.primary_status, {ASSET_SELECT} FROM {res} "
                                      f"WHERE {res}.status = 'ENABLED'{where} AND asset.type IN ({types})"):
+                link = r[camel]
+                if link.get("fieldType") == "AD_IMAGE" and link.get("primaryStatus") not in (None, "ELIGIBLE", "LIMITED"):
+                    continue  # an image extension Google won't show (disapproved, paused, pending): only eligible ones, limited included, are previewed
                 text, lines, img = _ext_fields(r["asset"])
                 row(level=level, campaign=g(r, "campaign", "name"), channel=g(r, "campaign", "advertisingChannelType"),
                     group=g(r, "adGroup", "name"), field=r[camel].get("fieldType", ""), type_=r["asset"].get("type", ""),
