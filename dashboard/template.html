@@ -404,6 +404,7 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
     <div class="seg" id="f-account" role="group" aria-label="Account"></div>
     <div class="seg" id="f-kind" role="group" aria-label="Ad type"></div>
     <div class="seg" id="f-mfmt" role="group" aria-label="Format" hidden></div>
+    <div class="seg" id="f-mstat" role="group" aria-label="Status" hidden></div>
     <select class="field" id="f-campaign" aria-label="Campaign"></select>
     <input class="field" id="f-q" type="search" placeholder="Search headlines, descriptions, ad groups" aria-label="Search">
     <label class="check"><input type="checkbox" id="f-unserved" checked> Include not-served ads</label>
@@ -578,7 +579,7 @@ const MNET={facebook:"Facebook",instagram:"Instagram",messenger:"Messenger",audi
 const MLIMIT={primary:125,headline:40,description:30};  /* Meta's recommended lengths: longer text is cut with "See more" */
 const mads=((META&&META.ads)||[]).map(a=>Object.assign({},a,{rawId:a.id,id:"meta:"+a.id,
   title:a.name||(a.headline||[])[0]||a.adset,text:[a.name,a.campaign,a.adset,...(a.primary||[]),...(a.headline||[]),...(a.description||[])].join(" ").toLowerCase()}));
-Object.assign(state,{plat:"google",mfmt:"All",mplace:store.get("mplace","fb")});
+Object.assign(state,{plat:"google",mfmt:"All",mstat:mads.some(a=>a.status==="ACTIVE")?"active":"All",mplace:store.get("mplace","fb")});
 function findAd(id){return ads.find(a=>a.id===id)||mads.find(a=>a.id===id)||gptAds.find(a=>a.id===id)||rdAds.find(a=>a.id===id)}
 function mCombos(ad){
   if(!ad._mc){
@@ -644,18 +645,20 @@ function mPreview(ad,c){
   return({fb:fbFeed,ig:igFeed,story:igStory}[state.mplace]||fbFeed)(ad,c);
 }
 function mPlacementText(ad){const p=ad.placements||{};return p.automatic?"Automatic placements (Facebook, Instagram, Messenger, Audience Network)":(p.networks||[]).map(n=>MNET[n]||n).join(", ")}
+const mOn=a=>a.status==="ACTIVE";
+function mStatus(a){const s=(a.status||"").toLowerCase().replace(/_/g," ").replace("adset","ad set");return s.charAt(0).toUpperCase()+s.slice(1)}
 function mFiltered(){
   const q=state.q.trim().toLowerCase();
-  return mads.filter(a=>(state.campaign==="All"||a.campaign===state.campaign)&&(state.mfmt==="All"||a.format===state.mfmt)&&(!q||a.text.includes(q)));
+  return mads.filter(a=>(state.campaign==="All"||a.campaign===state.campaign)&&(state.mfmt==="All"||a.format===state.mfmt)&&(state.mstat==="All"||(state.mstat==="active")===mOn(a))&&(!q||a.text.includes(q)));
 }
 function mRenderList(list){
   const el=$("#list");
-  if(!list.length){el.innerHTML=`<div class="empty">${!META?"Meta ads could not be read.":mads.length?"No ads match these filters.":"No active Meta ads."}</div>`;return}
+  if(!list.length){el.innerHTML=`<div class="empty">${!META?"Meta ads could not be read.":mads.length?"No ads match these filters.":"No Meta ads in this account."}</div>`;return}
   const groups=new Map();
   list.forEach(a=>{if(!groups.has(a.campaign))groups.set(a.campaign,[]);groups.get(a.campaign).push(a)});
   el.innerHTML=[...groups].map(([camp,items])=>`<div class="grp"><span>${esc(camp)}</span><span>Meta</span></div>`+items.map(a=>`<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
       <span class="t">${esc(a.title)}</span><span class="s">${esc(a.adset)}</span>
-      <span class="r"><span class="kind META">Meta</span><span class="kind fmt">${esc(MFMT[a.format]||a.format)}</span></span></button>`).join("")).join("");
+      <span class="r"><span class="kind META">Meta</span>${mOn(a)?"":`<span class="kind off">${esc(mStatus(a))}</span>`}<span class="kind fmt">${esc(MFMT[a.format]||a.format)}</span></span></button>`).join("")).join("");
 }
 function mPreviewButtons(ad){
   if(!(ad.previews||[]).length)return "";
@@ -682,7 +685,7 @@ function mRenderDetail(){
   const el=$("#detail");
   if(!META){el.innerHTML=`<div class="panel"><div class="merr">${esc(DATA.metaError||"Meta ads are not set up for this dashboard.")}</div></div>`;return}
   const ad=mads.find(a=>a.id===state.sel);
-  if(!ad){el.innerHTML=`<div class="panel empty">${mads.length?"Pick an ad on the left to see its previews.":"There are no active Meta ads in this account right now."}</div>`;return}
+  if(!ad){el.innerHTML=`<div class="panel empty">${mads.length?"Pick an ad on the left to see its previews.":"There are no running or paused Meta ads in this account."}</div>`;return}
   const combos=mCombos(ad);if(state.combo>=combos.length)state.combo=0;
   const c=combos[state.combo];
   const slotNote=ad.slots&&ad.slots.story&&ad.slots.feed?" It has its own picture for Stories and Reels, shown in the Instagram Story preview.":"";
@@ -695,7 +698,7 @@ function mRenderDetail(){
   <div class="panel">
     <div class="crumb"><span>${esc(META.account.name)}</span><span>${esc(ad.campaign)}</span><span>${esc(ad.adset)}</span></div>
     <h2>${esc(ad.title)}</h2>
-    <div class="meta"><span class="kind META">Meta</span><span class="kind fmt">${esc(MFMT[ad.format]||ad.format)}</span><span>Active${ad.created?` · made ${esc(ad.created)}`:""}</span>
+    <div class="meta"><span class="kind META">Meta</span><span class="kind fmt">${esc(MFMT[ad.format]||ad.format)}</span>${mOn(ad)?"":`<span class="kind off">${esc(mStatus(ad))}</span>`}<span>${mOn(ad)?"Active":"Not running"}${ad.created?` · made ${esc(ad.created)}`:""}</span>
       <span class="mono" style="font-size:12px">Ad ID ${esc(ad.rawId)}</span>${ad.link?`<a href="${esc(ad.link)}" target="_blank" rel="noopener">Landing page ↗</a>`:""}${ad.igPermalink?`<a href="${esc(ad.igPermalink)}" target="_blank" rel="noopener">On Instagram ↗</a>`:""}</div>
     <div class="note real">${note}</div>
   </div>
@@ -717,11 +720,13 @@ function mRender(){
   $("#f-campaign").innerHTML=`<option value="All">All campaigns (${camps.length})</option>`+camps.map(c=>`<option value="${esc(c)}"${c===state.campaign?" selected":""}>${esc(c)}</option>`).join("");
   const fmts=[...new Set(mads.map(a=>a.format))];
   segBtns($("#f-mfmt"),[["All","All formats"],...Object.keys(MFMT).filter(f=>fmts.includes(f)).map(f=>[f,MFMT[f]])],"mfmt");
+  segBtns($("#f-mstat"),[["active","Active"],["paused","Not running"],["All","All ads"]],"mstat");
   const list=mFiltered();
   if(!list.some(a=>a.id===state.sel))state.sel=(list[0]||{}).id||null;
   mRenderList(list);mRenderDetail();
   try{history.replaceState(null,"",state.sel?"#meta-"+state.sel.replace(/^meta:/,""):location.pathname+location.search)}catch(e){}
 }
+$("#f-mstat").onclick=e=>{const b=e.target.closest("button");if(b){state.mstat=b.dataset.v;render()}};
 $("#f-mfmt").onclick=e=>{const b=e.target.closest("button");if(b){state[{gpt:"gstat",reddit:"rstat"}[state.plat]||"mfmt"]=b.dataset.v;render()}};
 const PLAT_ICON={google:`<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 8h6" stroke="currentColor" stroke-width="1.6"/></svg>`,
   reddit:`<svg viewBox="0 0 16 16" aria-hidden="true"><ellipse cx="8" cy="9.6" rx="5.6" ry="4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 5.6l1-3.4 2.6.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12.2" cy="3" r="1.1" fill="currentColor"/><circle cx="6" cy="9.3" r=".9" fill="currentColor"/><circle cx="10" cy="9.3" r=".9" fill="currentColor"/></svg>`,
@@ -1155,7 +1160,7 @@ function renderHeader(){
   }
   if(state.plat==="meta"){
     const live=/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname);
-    $("#fresh").innerHTML=META?`<span>Meta ads · <b>active now</b> · ${esc(META.account.name)}</span><span>Read from Meta <b>${esc(whenText(META.pulledAt.replace(" ","T")))}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${live?`<a class="refresh" href="api/rebuild">Refresh from ${srcText}</a>`:""}`
+    $("#fresh").innerHTML=META?`<span>Meta ads · <b>${mads.filter(mOn).length} active</b> of ${mads.length} · ${esc(META.account.name)}</span><span>Read from Meta <b>${esc(whenText(META.pulledAt.replace(" ","T")))}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${live?`<a class="refresh" href="api/rebuild">Refresh from ${srcText}</a>`:""}`
       :`<span>Meta ads could not be read</span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>`;
     return;
   }
@@ -1168,7 +1173,7 @@ function render(){
   const plats=[["google","Google"],hasMeta?["meta","Meta"]:null,hasReddit?["reddit","Reddit"]:null,hasGpt?["gpt","ChatGPT"]:null].filter(Boolean);
   if(plats.length>1)$("#f-plat").innerHTML=plats.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${state.plat===v}">${PLAT_ICON[v]}${l}</button>`).join("");
   $("#f-plat").hidden=plats.length<2;
-  ["#f-account","#f-kind",".check","#sumBtn"].forEach(s=>$(s).hidden=other);$("#f-mfmt").hidden=!other;
+  ["#f-account","#f-kind",".check","#sumBtn"].forEach(s=>$(s).hidden=other);$("#f-mfmt").hidden=!other;$("#f-mstat").hidden=!meta;
   $("#f-mfmt").setAttribute("aria-label",gpt||reddit?"Status":"Format");
   $("#f-q").placeholder=meta?"Search primary text, headlines, ad names":gpt?"Search titles, text, ad names":reddit?"Search headlines, captions, ad names":"Search headlines, descriptions, ad groups";
   renderHeader();
@@ -1190,7 +1195,7 @@ $("#f-campaign").onchange=e=>{state.campaign=e.target.value;render()};
 $("#f-q").oninput=e=>{state.q=e.target.value;render()};
 $("#f-unserved").onchange=e=>{state.unserved=e.target.checked;render()};
 const hm=location.hash.match(/^#ad-(.+)$/),mm=location.hash.match(/^#meta-(.+)$/),gm=location.hash.match(/^#gpt-(.+)$/),rm=location.hash.match(/^#reddit-(.+)$/);
-if(mm&&hasMeta){state.plat="meta";if(mads.some(a=>a.rawId===mm[1]))state.sel="meta:"+mm[1]}
+if(mm&&hasMeta){state.plat="meta";const m=mads.find(a=>a.rawId===mm[1]);if(m){state.sel=m.id;if(!mOn(m))state.mstat="All"}}
 else if(gm&&hasGpt){state.plat="gpt";const g=gptAds.find(a=>a.rawId===gm[1]);if(g){state.sel=g.id;if(g.status!=="active")state.gstat="All"}}
 else if(rm&&hasReddit){state.plat="reddit";const r=rdAds.find(a=>a.rawId===rm[1]);if(r){state.sel=r.id;if(r.status!=="active")state.rstat="All"}}
 else if(hm&&ads.some(a=>a.id===hm[1]))state.sel=hm[1];

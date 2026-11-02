@@ -102,7 +102,7 @@ class FakeGraph:
     def pages(self, path, params, limit=meta_api.MAX_ADS):
         self.asked.append(path)
         if path.endswith("/ads"):
-            assert json.loads(params["effective_status"]) == ["ACTIVE"]
+            assert "ACTIVE" in json.loads(params["effective_status"]) and "CAMPAIGN_PAUSED" in json.loads(params["effective_status"]) and "ARCHIVED" not in json.loads(params["effective_status"])
             return [{"id": "1", "name": "Facial offer", "effective_status": "ACTIVE", "created_time": "2026-10-01T10:00:00+0000", "campaign": {"name": "Prospecting", "objective": "OUTCOME_LEADS"},
                      "adset": {"name": "Denver 25-54", "targeting": {}}, "creative": IMAGE},
                     {"id": "2", "name": "Team video", "effective_status": "ACTIVE", "campaign": {"name": "Prospecting"}, "adset": {"name": "IG only", "targeting": {"publisher_platforms": ["instagram"]}}, "creative": VIDEO}]

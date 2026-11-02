@@ -1,10 +1,10 @@
-"""Meta Marketing API reader: a client's active Meta ads, as the dashboard's Meta view draws them.
+"""Meta Marketing API reader: a client's running and paused Meta ads, as the dashboard's Meta view draws them.
 
 Read only. One ad account per client (clients.json `meta_account_id`), the token in META_ADS_ACCESS_TOKEN
 (a System User token with ads_read on that account). What is read:
 
   * the account's name;
-  * every ACTIVE ad with its campaign, its ad set's placements and its creative (the words, the pictures,
+  * every ad that is running or paused (not archived or deleted) with its campaign, its ad set's placements and its creative (the words, the pictures,
     the video, the carousel cards, the button and the link, wherever Meta keeps them);
   * the full-size pictures behind image hashes (/adimages), the cover of each video (/{video}), and the
     page's name and picture (/{page});
@@ -28,7 +28,9 @@ from html import unescape
 import gads_api
 
 GRAPH = "https://graph.facebook.com/" + os.environ.get("META_API_VERSION", "v23.0").strip()
-CACHE_VERSION = 2              # 2: the real format, placement pictures, Advantage+ and optimization settings
+CACHE_VERSION = 3              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too
+# the ads read: running, paused at any level, and waiting on review; archived and deleted ones are left out
+STATUSES = ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED", "PENDING_REVIEW", "IN_PROCESS", "WITH_ISSUES", "DISAPPROVED", "PREAPPROVED", "PENDING_BILLING_INFO"]
 MAX_ADS = 300
 PREVIEW_FORMATS = (("MOBILE_FEED_STANDARD", "Facebook feed"), ("INSTAGRAM_STANDARD", "Instagram feed"), ("INSTAGRAM_STORY", "Instagram Story"))
 AD_FIELDS = ("id,name,effective_status,created_time,campaign{id,name,objective},adset{id,name,targeting},"
@@ -285,16 +287,16 @@ def pull(client):
     api, log, t0 = Api(), [], time.time()
     account = api.get(act, {"fields": "name,currency,account_status"})
     try:
-        ads = api.pages(act + "/ads", {"fields": EXTRA_FIELDS, "effective_status": json.dumps(["ACTIVE"]), "limit": 50})
+        ads = api.pages(act + "/ads", {"fields": EXTRA_FIELDS, "effective_status": json.dumps(STATUSES), "limit": 50})
     except RuntimeError as e:
         log.append("The Advantage+ and optimization settings could not be read (%s), so they are not shown" % str(e)[:160])
-        ads = api.pages(act + "/ads", {"fields": AD_FIELDS, "effective_status": json.dumps(["ACTIVE"]), "limit": 50})
+        ads = api.pages(act + "/ads", {"fields": AD_FIELDS, "effective_status": json.dumps(STATUSES), "limit": 50})
     if not ads:  # say what the account does hold, so "no ads" is not mistaken for a broken read
         seen = _soft(log, "The ad statuses", lambda: api.pages(act + "/ads", {"fields": "effective_status", "limit": 200}, limit=2000), [])
         by = {}
         for a in seen:
             by[a.get("effective_status") or "UNKNOWN"] = by.get(a.get("effective_status") or "UNKNOWN", 0) + 1
-        log.append("No active ads in this account; this token sees %d ads in all%s" % (len(seen), (" (" + ", ".join("%d %s" % (n, k.lower().replace("_", " ")) for k, n in sorted(by.items())) + ")") if by else ""))
+        log.append("No running or paused ads in this account; this token sees %d ads in all%s" % (len(seen), (" (" + ", ".join("%d %s" % (n, k.lower().replace("_", " ")) for k, n in sorted(by.items())) + ")") if by else ""))
     parsed = {a["id"]: creative_parts(a.get("creative")) for a in ads if a.get("id")}
 
     hashes = sorted({i["hash"] for p in parsed.values() for i in p["images"] + [c["image"] for c in p["cards"] if c.get("image")] if i.get("hash")})
@@ -361,7 +363,7 @@ def pull(client):
             "previews": prevs.get(a["id"]) or [], "igPermalink": (a.get("creative") or {}).get("instagram_permalink_url") or "",
         })
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    print(f"Meta API: {act}, {len(out_ads)} active ads, {api.requests} requests, {time.time() - t0:.0f}s")
+    print(f"Meta API: {act}, {len(out_ads)} ads ({sum(a['status'] == 'ACTIVE' for a in out_ads)} active), {api.requests} requests, {time.time() - t0:.0f}s")
     for m in log:
         print("  !", m)
     return {"version": CACHE_VERSION, "pulledAt": now, "pulledTs": time.time(), "account": {"id": act, "name": account.get("name") or act, "currency": account.get("currency") or ""},
