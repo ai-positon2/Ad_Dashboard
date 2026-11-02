@@ -106,7 +106,7 @@ class Api:
         raise RuntimeError("Reddit kept refusing the request (rate limit)")
 
     def pages(self, path, params=None, limit=5000):
-        out, got = [], self.call(path, dict(params or {}, **{"page.size": 1000}))
+        out, got = [], self.call(path, dict(params or {}, **{"page.size": 500}))
         while True:
             out += got.get("data") or []
             nxt = (got.get("pagination") or {}).get("next_url")
