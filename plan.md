@@ -224,3 +224,16 @@ the hub (https://adsdashboard.up.railway.app/tealium/). The sheet is still read 
 The Ad_Dashboard service's Railway domain is now https://adsdashboard.up.railway.app (was tealiumads); every dashboard is at `/<slug>/`.
 `live_url` updated. The six per-client services (Burnout, Inspire, SoteriSkin, OIA, 42 North, Mchale) have no volume and comments off, so they
 hold nothing the hub lacks and can be deleted (phase 5 above). The live Apps Script comment notifier must point at the new domain if it used the old one.
+
+## Meta previews (2026-11-02)
+A Google | Meta switch under the dashboard name, for clients with `meta_account_id` in clients.json (Soteri Skin: 261215873024315). Clients without one show no switch.
+- `meta_api.py` reads the account's ACTIVE ads (creative words, pictures by image hash, videos and their covers, carousel cards, button, link), ad set placements,
+  the page's name and picture (and its Instagram account) and Meta's own preview links (Facebook feed, Instagram feed, Instagram Story; they last about a day).
+  Token: `META_ADS_ACCESS_TOKEN` on the service (System User, ads_read). Cached next to the Google pull (`<client>.meta.json`), at most 12 h (`META_PREVIEW_HOURS`), so preview links stay fresh.
+  A part Meta refuses (a page, a preview) is logged and left out; a failed refresh falls back to the last good read.
+- `build.py` downloads the pictures like Google's and puts `meta` / `metaError` in the page data. "Refresh" reads both platforms.
+- The page draws Facebook feed, Instagram feed and Instagram Story previews from the ad's real content; a flexible ad shows up to 12 text and picture combinations;
+  a carousel scrolls its cards. Assets: primary text / headlines / descriptions with Meta's recommended lengths (125 / 40 / 30), button, placements, format, objective,
+  images, videos (play on Facebook). Comments work on Meta ads (`meta:<ad id>`).
+- Tested: `tests/test_meta_api.py` (creative shapes, a whole pull against a fake Graph API, refused parts) and a local Soteri build with sample Meta ads.
+  The live Meta read is checked after deploy (no token on the dev machine).

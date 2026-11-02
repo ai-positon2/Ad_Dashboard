@@ -25,6 +25,7 @@ import pandas as pd
 from PIL import Image
 
 import gads_api
+import meta_api
 
 ROOT = Path(__file__).parent
 CLIENTS = json.loads((ROOT / "clients.json").read_text(encoding="utf-8"))
@@ -616,7 +617,32 @@ def load_tables():
     return x, api_data
 
 
+def load_meta(assets, forced):
+    """The client's active Meta ads for the Meta view, pictures downloaded like Google's; (data, error). No meta_account_id: (None, "")."""
+    if not CLIENT.get("meta_account_id"):
+        return None, ""
+    if not meta_api.available():
+        return None, "META_ADS_ACCESS_TOKEN is not set on this server, so the Meta ads cannot be read."
+    try:
+        m = meta_api.load_or_pull(CLIENT_KEY, CLIENT, forced=forced)
+    except Exception as e:
+        print(f"! Meta API failed ({e})")
+        return None, f"The Meta ads could not be read: {e}"
+    urls = [u for a in m["ads"] for u in a["images"] + [v["thumb"] for v in a["videos"]] + [c["image"] or (c["video"] or {}).get("thumb", "") for c in a["cards"]]
+            + [a["page"]["picture"], a["page"]["igPicture"]]]
+    assets.prefetch(urls)
+    local = lambda u: assets.get(u) if u else ""  # noqa: E731
+    ads = []
+    for a in m["ads"]:
+        ads.append(dict(a, images=[x for x in (local(u) for u in a["images"]) if x], videos=[dict(v, thumb=local(v["thumb"])) for v in a["videos"]],
+                        cards=[dict(c, image=local(c["image"]), video=dict(c["video"], thumb=local(c["video"]["thumb"])) if c.get("video") else None) for c in a["cards"]],
+                        page=dict(a["page"], picture=local(a["page"]["picture"]), igPicture=local(a["page"]["igPicture"]))))
+    print(f"Meta: {len(ads)} active ads read {m['pulledAt']}")
+    return {"account": m["account"], "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
+
+
 def main():
+    forced = gads_api.FORCE.is_set() or os.environ.get("GADS_FORCE") == "1"  # read before the Google pull clears it, so a Refresh reads Meta again too
     x, api_data = load_tables()
     rc, pc = tab(x, "RSA Combinations"), tab(x, "PMax Combinations")
     for name, df in (("RSA Combinations", rc), ("PMax Combinations", pc)):
@@ -665,6 +691,7 @@ def main():
         "performance": build_performance(perf_tab),
         "perfExportedAt": first(perf_tab, "Exported at"),
     }
+    payload["meta"], payload["metaError"] = load_meta(assets, forced)
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8").replace("__CLIENT__", CLIENT["name"])
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)
