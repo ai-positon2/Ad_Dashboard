@@ -54,7 +54,8 @@ class Api:
     def __init__(self):
         if missing():
             raise RuntimeError(", ".join(missing()) + " not set")
-        self.requests, self.lock, self.tok = 0, threading.Lock(), self._access_token()
+        self.requests, self.lock = 0, threading.Lock()
+        self.tok = self._access_token()
 
     def _open(self, req):
         with self.lock:
