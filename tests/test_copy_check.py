@@ -25,7 +25,8 @@ def fake_tool(calls):
                                ("very unique", "STYLE", "Wordy.")):
             i = text.find(word)
             while i >= 0:
-                out.append({"offset": i, "length": len(word), "message": msg, "rule": {"id": "R", "category": {"id": cat}}, "replacements": [{"value": "receive"}]})
+                u16 = lambda x: len(x.encode("utf-16-le")) // 2  # noqa: E731  LanguageTool counts in UTF-16 units
+                out.append({"offset": u16(text[:i]), "length": u16(word), "message": msg, "rule": {"id": "R", "category": {"id": cat}}, "replacements": [{"value": "receive"}]})
                 i = text.find(word, i + 1)
         return out
     return ask
@@ -34,7 +35,7 @@ def fake_tool(calls):
 def test_spelling_grammar_and_punctuation_come_back_per_field_and_brand_words_are_allowed():
     calls = []
     copy_check._ask, os.environ["LANGUAGETOOL_URL"] = fake_tool(calls), "https://lt.example/v2"
-    fields = {"m:1": [("Headline", "Soteri Skin: recieve 15% off"), ("Primary text", "A very unique cream , for babies.")],
+    fields = {"m:0": [("Primary text", "A 😍😍 cream babies love")], "m:1": [("Headline", "Soteri Skin: recieve 15% off"), ("Primary text", "A very unique cream , for babies.")],
               "m:2": [("Headline", "Read the Skinwell blog")]}
     got = copy_check.review(fields, CLIENT, [])
     one = got["m:1"]["issues"]

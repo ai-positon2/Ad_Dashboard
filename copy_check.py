@@ -18,14 +18,16 @@ import urllib.request
 
 import gads_api
 
-CACHE_VERSION = 1
+CACHE_VERSION = 2            # 2: offsets were UTF-16 and drifted after an emoji
 PUBLIC_MAX_REQUESTS = 15     # LanguageTool's public server allows 20 a minute; what is left is checked on the next refresh. Our own has no limit
 CHUNK = 15000                # characters per request (the public server takes up to 20 KB)
 # the kinds of LanguageTool match shown; style and wording suggestions are left out
 KINDS = {"TYPOS": "Spelling", "GRAMMAR": "Grammar", "CONFUSED_WORDS": "Grammar", "COLLOCATIONS": "Grammar", "NONSTANDARD_PHRASES": "Grammar",
          "PUNCTUATION": "Punctuation", "TYPOGRAPHY": "Punctuation", "CASING": "Capitalisation"}
 # rules that misfire on ad copy: headlines carry no full stop, curly and straight quotes are both fine, dashes are a house choice
-DISABLED = ("PUNCTUATION_PARAGRAPH_END", "EN_QUOTES", "DASH_RULE", "ENGLISH_WORD_REPEAT_BEGINNING_RULE", "EN_UNPAIRED_QUOTES", "PLUS_MINUS", "MULTIPLICATION_SIGN")
+# and its guess that a comma belongs before "so", "and" or "but", which flags most casual ad sentences
+DISABLED = ("PUNCTUATION_PARAGRAPH_END", "EN_QUOTES", "DASH_RULE", "ENGLISH_WORD_REPEAT_BEGINNING_RULE", "EN_UNPAIRED_QUOTES", "PLUS_MINUS", "MULTIPLICATION_SIGN",
+            "COMMA_COMPOUND_SENTENCE", "COMMA_COMPOUND_SENTENCE_2")
 
 
 def endpoint():
@@ -60,6 +62,16 @@ def _ask(url, text, lang):
     req = urllib.request.Request(url + "/check", data=body, headers={"User-Agent": "ad-preview-dashboard", "Content-Type": "application/x-www-form-urlencoded"})
     with urllib.request.urlopen(req, timeout=60) as r:
         return json.load(r).get("matches") or []
+
+
+def _py_offsets(text):
+    """LanguageTool counts offsets in UTF-16 units (an emoji is 2): {UTF-16 offset: Python index} for `text`."""
+    out, u = {}, 0
+    for i, c in enumerate(text):
+        out[u] = i
+        u += 2 if ord(c) > 0xFFFF else 1
+    out[u] = len(text)
+    return out
 
 
 def _public(url):
@@ -104,9 +116,13 @@ def language_tool(texts, lang, log, fresh=False):
             log.append("The spelling and grammar check could not reach LanguageTool (%s); it runs again on the next refresh" % str(e)[:120])
             failed = True
             break
-        per = {t: [] for t in chunk}
+        per, at = {t: [] for t in chunk}, _py_offsets(joined)
         for m in matches:
-            o, n = m.get("offset", 0), m.get("length", 0)
+            u = m.get("offset", 0)
+            o = at.get(u)
+            if o is None:
+                continue
+            n = at.get(u + m.get("length", 0), o) - o
             for t, s in zip(chunk, starts):
                 if s <= o and o + n <= s + len(t):
                     per[t].append({"o": o - s, "n": n, "msg": m.get("message") or "", "rule": (m.get("rule") or {}).get("id") or "",
