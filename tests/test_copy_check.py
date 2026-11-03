@@ -43,6 +43,7 @@ def test_spelling_grammar_and_punctuation_come_back_per_field_and_brand_words_ar
     assert got["m:2"]["issues"] == [] and got["m:1"]["checked"] and len(calls) == 1          # all texts in one request; style left out; brand words allowed
     copy_check.review(fields, CLIENT, [])
     assert len(calls) == 1                                                                     # the second build reads the cache
+    assert copy_check._allowed("Skinwell-enriched", {"skinwell"}) and not copy_check._allowed("Skinwel-enriched", {"skinwell"})
     copy_check.review(fields, CLIENT, [], fresh=True)
     assert len(calls) == 2                                                                     # a Refresh asks again
     fixed = {"m:1": [("Headline", "Soteri Skin: receive 15% off")]}

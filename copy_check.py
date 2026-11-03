@@ -163,6 +163,8 @@ def local_issues(fields):
 
 def _allowed(word, allow):
     w = word.strip("'’®™")
+    if "-" in w.strip("-"):  # "Ceramide-enriched": allowed when one of its parts is
+        return any(_allowed(part, allow) for part in w.split("-") if part)
     return (not w or w.lower() in allow or any(c.isdigit() for c in w) or (len(w) > 1 and w.isupper())
             or any(c.isupper() for c in w[1:]) or "/" in w)
 
@@ -179,7 +181,8 @@ def issues(fields, found, allow):
             if kind == "Spelling" and _allowed(word, allow):
                 continue
             out.append({"field": field, "text": text, "o": m["o"], "n": m["n"], "kind": kind, "msg": m["msg"], "fix": m["fix"]})
-    return out + local_issues(fields)
+    found_at = {(i["field"], i["text"], i["o"]) for i in out}  # LanguageTool's ".." is not listed twice
+    return out + [i for i in local_issues(fields) if (i["field"], i["text"], i["o"]) not in found_at]
 
 
 # ── promotions ──────────────────────────────────────────────────────────────
