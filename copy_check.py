@@ -1,8 +1,9 @@
 """Ad copy checks: spelling, grammar and punctuation, and the promotions an ad runs (promo codes, percent off and the like).
 
-Spelling, grammar and punctuation come from LanguageTool (LANGUAGETOOL_URL, for example https://api.languagetool.org/v2 or a server of
-your own). Without it only the checks made here are run: the same trademark written with ® in one place and ™ in another, and doubled
-punctuation. Each text is checked once and the answer kept on the volume next to the ad caches, so a refresh sends only new copy.
+Spelling, grammar and punctuation come from LanguageTool (LANGUAGETOOL_URL: our own server, for example
+http://languagetool.railway.internal:8010/v2, or https://api.languagetool.org/v2). Without it only the checks made here are run: the same
+trademark written with ® in one place and ™ in another, and doubled punctuation. A Refresh checks all the copy again; the hourly rebuilds
+check only copy not seen before. Only the answers for the copy now in the ads are kept, so a fixed mistake is gone after the next refresh.
 
 Promotions are read from the copy itself: a promo code ("use code SAVE15"), percent or money off, free shipping, subscribe and save.
 """
@@ -18,7 +19,7 @@ import urllib.request
 import gads_api
 
 CACHE_VERSION = 1
-MAX_REQUESTS = 15            # LanguageTool's public server allows 20 a minute; what is left is checked on the next refresh
+PUBLIC_MAX_REQUESTS = 15     # LanguageTool's public server allows 20 a minute; what is left is checked on the next refresh. Our own has no limit
 CHUNK = 15000                # characters per request (the public server takes up to 20 KB)
 # the kinds of LanguageTool match shown; style and wording suggestions are left out
 KINDS = {"TYPOS": "Spelling", "GRAMMAR": "Grammar", "CONFUSED_WORDS": "Grammar", "COLLOCATIONS": "Grammar", "NONSTANDARD_PHRASES": "Grammar",
@@ -61,12 +62,17 @@ def _ask(url, text, lang):
         return json.load(r).get("matches") or []
 
 
-def language_tool(texts, lang, log):
-    """{text: [match]} for each text, from the cache or LanguageTool. Texts are sent many to a request, a blank line apart, and the answers split back."""
+def _public(url):
+    return "api.languagetool.org" in url
+
+
+def language_tool(texts, lang, log, fresh=False):
+    """{text: [match]} for each text, from LanguageTool or (not `fresh`) the last answer for the same text. Texts are sent many to a request,
+    a blank line apart, and the answers split back. The cache keeps only these texts' answers."""
     url = endpoint()
     if not url:
         return {}
-    cache, out, todo = _load_cache(), {}, []
+    cache, out, todo = ({} if fresh else _load_cache()), {}, []
     for t in texts:
         k = _key(lang, t)
         if k in cache:
@@ -81,20 +87,22 @@ def language_tool(texts, lang, log):
         cur.append(t)
     if cur:
         chunks.append(cur)
-    sent = 0
-    for chunk in chunks[:MAX_REQUESTS]:
+    limit = PUBLIC_MAX_REQUESTS if _public(url) else len(chunks)
+    sent, failed = 0, False
+    for chunk in chunks[:limit]:
         joined, starts, pos = "", [], 0
         for t in chunk:
             starts.append(pos)
             joined += t + "\n\n"
             pos += len(t) + 2
         try:
-            if sent:
+            if sent and _public(url):
                 time.sleep(3.5)  # stay under 20 requests a minute
             matches = _ask(url, joined, lang)
             sent += 1
         except (urllib.error.URLError, OSError, ValueError) as e:
             log.append("The spelling and grammar check could not reach LanguageTool (%s); it runs again on the next refresh" % str(e)[:120])
+            failed = True
             break
         per = {t: [] for t in chunk}
         for m in matches:
@@ -106,10 +114,10 @@ def language_tool(texts, lang, log):
                     break
         for t in chunk:
             cache[_key(lang, t)] = out[t] = per[t]
-    if len(chunks) > MAX_REQUESTS:
-        log.append("%d ad texts are not checked for spelling and grammar yet; they are checked on the next refresh" % sum(len(c) for c in chunks[MAX_REQUESTS:]))
-    if sent:
-        _save_cache(cache)
+    if len(chunks) > limit and not failed:
+        log.append("%d ad texts are not checked for spelling and grammar yet; they are checked on the next refresh" % sum(len(c) for c in chunks[limit:]))
+    if sent or not fresh:
+        _save_cache({k: v for k, v in cache.items() if k in {_key(lang, t) for t in out}})  # copy no longer in the ads is dropped
     return out
 
 
@@ -199,10 +207,11 @@ def promos(fields):
 
 # ── one build ───────────────────────────────────────────────────────────────
 
-def review(ads_fields, client, log):
-    """{ad id: {issues, promos}} for every ad, ads_fields being {id: [(field, text)]}. Spelling allows the client's name, domain and `copy_allow` words."""
+def review(ads_fields, client, log, fresh=False):
+    """{ad id: {issues, promos}} for every ad, ads_fields being {id: [(field, text)]}. Spelling allows the client's name, domain and `copy_allow`
+    words. `fresh` (a Refresh) checks all the copy again instead of reusing the last answers."""
     lang = client.get("copy_language") or "en-US"
     texts = sorted({t for fs in ads_fields.values() for _, t in fs if t})
-    found = language_tool(texts, lang, log) if texts else {}
+    found = language_tool(texts, lang, log, fresh) if texts else {}
     allow = {w.lower() for w in re.findall(r"[\w']+", " ".join([client.get("name") or "", (client.get("domain") or "").split(".")[0]] + list(client.get("copy_allow") or [])))}
     return {k: {"issues": issues(fs, found, allow), "promos": promos(fs), "checked": bool(found) and all(t in found for _, t in fs if t)} for k, fs in ads_fields.items()}

@@ -42,6 +42,11 @@ def test_spelling_grammar_and_punctuation_come_back_per_field_and_brand_words_ar
     assert got["m:2"]["issues"] == [] and got["m:1"]["checked"] and len(calls) == 1          # all texts in one request; style left out; brand words allowed
     copy_check.review(fields, CLIENT, [])
     assert len(calls) == 1                                                                     # the second build reads the cache
+    copy_check.review(fields, CLIENT, [], fresh=True)
+    assert len(calls) == 2                                                                     # a Refresh asks again
+    fixed = {"m:1": [("Headline", "Soteri Skin: receive 15% off")]}
+    assert copy_check.review(fixed, CLIENT, [])["m:1"]["issues"] == [] and len(calls) == 3
+    assert list(copy_check._load_cache()) == [copy_check._key("en-US", "Soteri Skin: receive 15% off")]  # the old copy's answer is dropped
     del os.environ["LANGUAGETOOL_URL"]
 
 

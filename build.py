@@ -699,11 +699,11 @@ def copy_fields(payload):
     return {k: [(f, t) for f, t in v if t and str(t).strip() and str(t).lower() != "unknown"] for k, v in out.items()}
 
 
-def attach_copy(payload):
-    """Each ad gets `copy`: {issues, promos, checked}. Never fatal: a failed check leaves the ads as they are and says so."""
+def attach_copy(payload, forced=False):
+    """Each ad gets `copy`: {issues, promos, checked}. A Refresh (`forced`) checks all the copy again. Never fatal: a failed check leaves the ads as they are and says so."""
     log = []
     try:
-        got = copy_check.review(copy_fields(payload), CLIENT, log)
+        got = copy_check.review(copy_fields(payload), CLIENT, log, fresh=forced)
     except Exception as e:  # noqa: BLE001
         print(f"! copy check failed ({e})")
         return
@@ -773,7 +773,7 @@ def main():
     payload["meta"], payload["metaError"] = load_meta(assets, forced, logo=logo)
     payload["gpt"], payload["gptError"] = load_gpt(assets, forced, logo=logo)
     payload["reddit"], payload["redditError"] = load_reddit(assets, forced, logo=logo)
-    attach_copy(payload)
+    attach_copy(payload, forced)
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8").replace("__CLIENT__", CLIENT["name"])
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)
