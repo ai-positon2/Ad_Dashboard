@@ -1,8 +1,8 @@
 """Ad copy checks: spelling, grammar and punctuation, and the promotions an ad runs (promo codes, percent off and the like).
 
 Spelling, grammar and punctuation come from LanguageTool (LANGUAGETOOL_URL: our own server, for example
-http://languagetool.railway.internal:8010/v2, or https://api.languagetool.org/v2). Without it only the checks made here are run: the same
-trademark written with ® in one place and ™ in another, and doubled punctuation. A Refresh checks all the copy again; the hourly rebuilds
+http://languagetool.railway.internal:8010/v2, or https://api.languagetool.org/v2). Without it only the check made here is run: doubled
+punctuation. A Refresh checks all the copy again; the hourly rebuilds
 check only copy not seen before. Only the answers for the copy now in the ads are kept, so a fixed mistake is gone after the next refresh.
 
 Promotions are read from the copy itself: a promo code ("use code SAVE15"), percent or money off, free shipping, subscribe and save.
@@ -139,25 +139,12 @@ def language_tool(texts, lang, log, fresh=False):
 
 # ── the checks made here ────────────────────────────────────────────────────
 
-MARK = re.compile(r"([A-Za-z][\w/.-]*?)\s?([®™])")
-
-
 def local_issues(fields):
-    """Issues found without LanguageTool, over one ad's (field, text) pairs."""
-    out, marks = [], {}
+    """Issues found without LanguageTool, over one ad's (field, text) pairs. ® and ™ on the same mark are left alone (the client mixes them on purpose)."""
+    out = []
     for field, text in fields:
-        for m in MARK.finditer(text):
-            marks.setdefault(m.group(1).lower(), []).append((field, text, m))
         for m in re.finditer(r"([!?,;:])\1+|(?<!\.)\.\.(?!\.)", text):
             out.append({"field": field, "text": text, "o": m.start(), "n": m.end() - m.start(), "kind": "Punctuation", "msg": "Doubled punctuation.", "fix": [m.group(0)[0]]})
-    for word, seen in marks.items():
-        symbols = {m.group(2) for _, _, m in seen}
-        if len(symbols) > 1:
-            first = seen[0][2].group(2)
-            for field, text, m in seen:
-                if m.group(2) != first:
-                    out.append({"field": field, "text": text, "o": m.start(2), "n": 1, "kind": "Consistency",
-                                "msg": "%s is written with %s elsewhere in this ad." % (seen[0][2].group(1), first), "fix": [first]})
     return out
 
 

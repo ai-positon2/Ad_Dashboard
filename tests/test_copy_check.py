@@ -56,7 +56,7 @@ def test_without_languagetool_only_the_checks_made_here_run():
     os.environ.pop("LANGUAGETOOL_URL", None)
     got = copy_check.review({"m:1": [("Primary text", "Patented pH/LOCK® technology!! Try pH/LOCK™ today.."), ("Headline", "recieve")]}, CLIENT, [])["m:1"]
     assert not got["checked"]
-    assert [(i["kind"], i["text"][i["o"]:i["o"] + i["n"]], i["fix"]) for i in got["issues"]] == [("Punctuation", "!!", ["!"]), ("Punctuation", "..", ["."]), ("Consistency", "™", ["®"])]
+    assert [(i["kind"], i["text"][i["o"]:i["o"] + i["n"]], i["fix"]) for i in got["issues"]] == [("Punctuation", "!!", ["!"]), ("Punctuation", "..", ["."])]   # ® and ™ mixed is not flagged
 
 
 def test_promo_codes_and_offers_are_read_from_the_copy():

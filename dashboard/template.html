@@ -973,8 +973,8 @@ function qcMark(i){const t=i.text,a=Math.max(0,i.o-45),b=Math.min(t.length,i.o+i
 function copyPanel(ad,running){
   const c=ad.copy,assets=promoAssets(ad);if(!c&&!assets.length)return "";
   const iss=c?c.issues:[],pr=c?c.promos:{codes:[],offers:[]},spell=!!(CC&&CC.spelling);
-  const how=spell?(c&&!c.checked?"Some of this copy is still waiting for its spelling and grammar check; it is checked on a coming refresh.":"Spelling, grammar and punctuation checked by LanguageTool, plus trademark symbols and doubled punctuation.")
-    :"Spelling and grammar are not checked yet: this server has no LanguageTool set (LANGUAGETOOL_URL). Checked here: trademark symbols (® and ™) and doubled punctuation.";
+  const how=spell?(c&&!c.checked?"Some of this copy is still waiting for its spelling and grammar check; it is checked on a coming refresh.":"Spelling, grammar and punctuation checked by LanguageTool, plus doubled punctuation.")
+    :"Spelling and grammar are not checked yet: this server has no LanguageTool set (LANGUAGETOOL_URL). Checked here: doubled punctuation.";
   const check=`<section class="aset wide"><h3>Copy check ${iss.length?`<span class="n">${iss.length}</span>`:""}</h3><p class="csub">${esc(how)}</p>
     ${iss.length?`<ul class="qlist">${iss.map(i=>`<li><span class="qk ${esc(i.kind.toLowerCase())}">${esc(i.kind)}</span><div><div class="qt">${qcMark(i)}</div><div class="qm">${esc(i.field)} · ${esc(i.msg)}${i.fix&&i.fix.length?` Try: <b>${i.fix.map(esc).join("</b>, <b>")}</b>`:""}</div></div></li>`).join("")}</ul>`
       :`<p class="qok">✓ ${spell&&c&&c.checked?"No spelling, grammar or punctuation issues found.":"Nothing found by the checks that ran."}</p>`}</section>`;
