@@ -33,7 +33,8 @@ SINGLE = {"object_story_spec": {"page_id": "111"}, "asset_feed_spec": {
         {"customization_spec": {"publisher_platforms": ["facebook", "instagram"], "facebook_positions": ["story", "facebook_reels"], "instagram_positions": ["story", "reels"]}, "image_label": {"name": "story_img"}, "priority": 1},
         {"customization_spec": {"publisher_platforms": ["facebook", "instagram"], "facebook_positions": ["feed"], "instagram_positions": ["stream"]}, "image_label": {"name": "feed_img"}, "priority": 2}]},
     "degrees_of_freedom_spec": {"creative_features_spec": {"image_touchups": {"enroll_status": "OPT_IN"}, "inline_comment": {"enroll_status": "OPT_IN"}, "image_templates": {"enroll_status": "OPT_IN"},
-                                                          "enhance_cta": {"enroll_status": "OPT_OUT"}, "image_brightness_and_contrast": {"enroll_status": "OPT_OUT"}, "brand_new_thing": {"enroll_status": "OPT_OUT"}}},
+                                                          "enhance_cta": {"enroll_status": "OPT_OUT"}, "image_brightness_and_contrast": {"enroll_status": "OPT_OUT"}, "brand_new_thing": {"enroll_status": "OPT_OUT"},
+                                                          "site_extensions": {"enroll_status": "OPT_OUT"}, "music": {"enroll_status": "OPT_OUT"}, "audio": {"enroll_status": "OPT_IN"}}},
     "contextual_multi_ads": {"enroll_status": "OPT_OUT"}}
 
 
@@ -64,8 +65,13 @@ def test_a_single_image_with_a_stories_version_is_a_single_image_with_its_placem
 
 def test_advantage_plus_enhancements_and_delivery_settings_are_in_ads_managers_words():
     e = meta_api.enhancements(SINGLE)
-    assert e == {"on": ["Add overlays", "Relevant comments", "Visual touch-ups"], "off": ["Adjust brightness and contrast", "Brand new thing", "Enhance CTA"], "multiAdvertiser": "off"}
-    assert meta_api.enhancements({}) == {"on": [], "off": [], "multiAdvertiser": ""}
+    assert e["on"] == ["Add music", "Add overlays", "Relevant comments", "Visual touch-ups"] and e["multiAdvertiser"] == "off"
+    assert e["off"] == ["Add music", "Add site links", "Adjust brightness and contrast", "Brand new thing", "Enhance CTA"]
+    # under Ads Manager's headings, a switch sent under two names (music, audio) once and on
+    assert [(i["group"], i["label"], i["on"]) for i in e["items"]] == [
+        ("setup", "Site links", False), ("creative", "Add music", True), ("creative", "Add overlays", True), ("creative", "Relevant comments", True),
+        ("creative", "Visual touch-ups", True), ("creative", "Adjust brightness and contrast", False), ("creative", "Enhance CTA", False), ("other", "Brand new thing", False)]
+    assert meta_api.enhancements({}) == {"on": [], "off": [], "items": [], "multiAdvertiser": ""}
     o = meta_api.optimization({"adset": {"optimization_goal": "OFFSITE_CONVERSIONS", "bid_strategy": "COST_CAP", "targeting": {"targeting_automation": {"advantage_audience": 1}}},
                                "campaign": {"daily_budget": "5000", "smart_promotion_type": "GUIDED_CREATION"}})
     assert o == {"goal": "Conversions", "bid": "Cost per result goal", "campaignBudget": True, "audience": "on", "shopping": False}
@@ -152,7 +158,7 @@ def test_when_meta_refuses_the_extra_fields_the_ads_are_read_without_them():
         out = meta_api.pull({"meta_account_id": "261215873024315"})
     finally:
         meta_api.Api = orig
-    assert len(out["ads"]) == 2 and out["ads"][0]["enhancements"] == {"on": [], "off": [], "multiAdvertiser": ""} and "Advantage+" in out["log"][0]
+    assert len(out["ads"]) == 2 and out["ads"][0]["enhancements"] == {"on": [], "off": [], "items": [], "multiAdvertiser": ""} and "Advantage+" in out["log"][0]
 
 
 def test_without_a_token_or_an_account_nothing_is_read():

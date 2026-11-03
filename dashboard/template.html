@@ -271,6 +271,22 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 .glink:hover{background:var(--accent-soft)}
 .exp{font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 8px}
 .exp.bad{color:var(--s-poor);background:var(--s-poor-bg)}.exp.warn{color:var(--s-average);background:var(--s-average-bg)}
+/* ---------- copy check, promotions, Advantage+ switches ---------- */
+.qlist,.olist{list-style:none;margin:0;padding:0}
+.qlist li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.qk{flex:none;font-size:11px;font-weight:600;border-radius:99px;padding:1px 8px;margin-top:2px;color:var(--s-average);background:var(--s-average-bg)}
+.qk.spelling,.qk.grammar{color:var(--s-poor);background:var(--s-poor-bg)}
+.qt{font-size:13.5px;overflow-wrap:anywhere}
+.qt mark{color:var(--s-poor);background:var(--s-poor-bg);border-radius:3px;padding:0 2px;text-decoration:underline wavy}
+.qm{font-size:12.5px;color:var(--muted);margin-top:2px}
+.qok{margin:0;font-size:13px;color:var(--s-good)}
+.olist li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.onoff{flex:none;font-size:11.5px;font-weight:600;border-radius:99px;padding:1px 9px}
+.onoff.on{color:var(--s-good);background:var(--s-good-bg)}.onoff.off{color:var(--s-none);background:var(--s-none-bg)}
+.aset details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--muted)}
+.aset details[open] summary{margin-bottom:6px}
+.prow{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.pcode{font:600 13px var(--mono);color:var(--s-good);background:var(--s-good-bg);border-radius:6px;padding:1px 7px}
 /* ---------- platform switch ---------- */
 .plat{margin:2px 0 8px}
 .plat button{display:inline-flex;align-items:center;gap:6px;font-weight:600}
@@ -326,6 +342,7 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 .mf.st .scta{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:#fff;color:#111;border-radius:99px;padding:8px 18px;font-weight:600;font-size:14px;white-space:nowrap}
 .kind.GPT{background:#E6F4EF;color:#0B7A5A}
 .kind.off{background:var(--s-average-bg);color:var(--s-average)}
+.kind.qc{background:var(--s-poor-bg);color:var(--s-poor)}.kind.promo{background:var(--s-good-bg);color:var(--s-good)}
 .kind.RD{background:#FFE9E0;color:#C23A00}
 /* ---------- Reddit previews ---------- */
 .rc{--r-bg:#FFFFFF;--r-ink:#0F1A1C;--r-sub:#576F76;--r-line:#E5EBEE;--r-btn:#E5EBEE;--r-cta:#0A449B;--r-skel:#EEF1F3;
@@ -658,7 +675,7 @@ function mRenderList(list){
   list.forEach(a=>{if(!groups.has(a.campaign))groups.set(a.campaign,[]);groups.get(a.campaign).push(a)});
   el.innerHTML=[...groups].map(([camp,items])=>`<div class="grp"><span>${esc(camp)}</span><span>Meta</span></div>`+items.map(a=>`<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
       <span class="t">${esc(a.title)}</span><span class="s">${esc(a.adset)}</span>
-      <span class="r"><span class="kind META">Meta</span>${mOn(a)?"":`<span class="kind off">${esc(mStatus(a))}</span>`}<span class="kind fmt">${esc(MFMT[a.format]||a.format)}</span></span></button>`).join("")).join("");
+      <span class="r"><span class="kind META">Meta</span>${mOn(a)?"":`<span class="kind off">${esc(mStatus(a))}</span>`}<span class="kind fmt">${esc(MFMT[a.format]||a.format)}</span>${copyBadges(a)}</span></button>`).join("")).join("");
 }
 function mPreviewButtons(ad){
   if(!(ad.previews||[]).length)return "";
@@ -670,7 +687,7 @@ function mAssets(ad){
   const vids=ad.videos.map(v=>`<figure>${v.url?`<a href="${esc(v.url)}" target="_blank" rel="noopener" title="Play on Facebook">`:""}${v.thumb?`<img src="${esc(v.thumb)}" alt="Video">`:`<div class="ph" style="height:96px;width:140px;border-radius:6px">Video</div>`}${v.url?"</a>":""}<figcaption>${v.length?Math.round(v.length)+" s":"Video"}${v.url?" · play on Facebook ↗":""}</figcaption></figure>`).join("");
   const slotOf=i=>{const s=ad.slots||{};return s.story&&s.story.kind==="image"&&s.story.i===i?"Stories and Reels":s.feed&&s.feed.kind==="image"&&s.feed.i===i&&s.story?"Feeds":""};
   const media=gallery("Images",ad.images.map((img,i)=>({img,f:slotOf(i)})))+(vids?`<section class="aset wide"><h3>Videos <span class="n">${ad.videos.length}</span></h3><div class="gallery">${vids}</div></section>`:"")+gallery("Carousel pictures",ad.cards.filter(k=>k.image).map(k=>({img:k.image})));
-  return `<div class="phead"><h3>Live assets</h3><span class="src">Read from Meta ${esc(META.pulledAt)}</span></div>${text}${media?`<div class="agrid media">${media}</div>`:""}${mSettings(ad)}`;
+  return `<div class="phead"><h3>Live assets</h3><span class="src">Read from Meta ${esc(META.pulledAt)}</span></div>${text}${media?`<div class="agrid media">${media}</div>`:""}${copyPanel(ad,mOn(ad))}${mSettings(ad)}`;
 }
 function mSettings(ad){
   const e=ad.enhancements,o=ad.optimization;if(!e&&!o)return "";
@@ -678,8 +695,16 @@ function mSettings(ad){
   const deliv=[o&&o.goal?["Optimised for",o.goal]:null,o&&o.bid?["Bid strategy",o.bid]:null,o?["Budget",o.campaignBudget?"Advantage+ campaign budget (set on the campaign)":"Set on the ad set"]:null,
     ["Placements",ad.placements&&ad.placements.automatic?"Advantage+ placements":"Manual: "+mPlacementText(ad)],o&&o.audience?["Advantage+ audience",yes(o.audience)]:null,
     e&&e.multiAdvertiser?["Multi-advertiser ads",yes(e.multiAdvertiser)]:null,o&&o.shopping?["Campaign","Advantage+ shopping campaign"]:null].filter(Boolean);
-  return `<div class="agrid media"><section class="aset wide"><h3>Advantage+ and optimizations</h3><ul class="slist">${deliv.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul></section>
-    ${e&&(e.on.length||e.off.length)?chipList("Creative enhancements turned on",e.on)+chipList("Creative enhancements turned off",e.off):e?`<section class="aset"><h3>Creative enhancements</h3><p class="csub">None set on this ad.</p></section>`:""}</div>`;
+  const items=(e&&e.items)||[];
+  const row=i=>`<li><span>${esc(i.label)}</span><span class="onoff ${i.on?"on":"off"}">${i.on?"On":"Off"}</span></li>`;
+  const grp=(g,title,note)=>{const xs=items.filter(i=>i.group===g);if(!xs.length)return "";
+    return `<section class="aset"><h3>${esc(title)} <span class="n">${xs.filter(i=>i.on).length}/${xs.length} on</span></h3>${note?`<p class="csub">${esc(note)}</p>`:""}<ul class="olist">${xs.map(row).join("")}</ul></section>`};
+  const other=items.filter(i=>i.group==="other"),otherOn=other.filter(i=>i.on).length;
+  const switches=items.length?grp("setup","Creative setup","Site links and products shown with the ad, as in the Ad creative section of Ads Manager.")+grp("creative","Advantage+ creative enhancements")
+      +(other.length?`<section class="aset wide"><details><summary>Other Meta switches on this ad: ${otherOn} on, ${other.length-otherOn} off</summary><ul class="olist">${other.map(row).join("")}</ul></details></section>`:"")
+    :e&&(e.on.length||e.off.length)?chipList("Creative enhancements turned on",e.on)+chipList("Creative enhancements turned off",e.off)
+    :e?`<section class="aset"><h3>Advantage+ creative enhancements</h3><p class="csub">None set on this ad.</p></section>`:"";
+  return `<div class="agrid media">${switches}<section class="aset wide"><h3>Delivery and optimization</h3><ul class="slist">${deliv.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul></section></div>`;
 }
 function mRenderDetail(){
   const el=$("#detail");
@@ -765,7 +790,7 @@ function gRenderList(list){
   list.forEach(a=>{if(!groups.has(a.campaign))groups.set(a.campaign,[]);groups.get(a.campaign).push(a)});
   el.innerHTML=[...groups].map(([camp,items])=>`<div class="grp"><span>${esc(camp)}</span><span>ChatGPT</span></div>`+items.map(a=>`<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
       <span class="t">${esc(a.title)}</span><span class="s">${esc(a.adset)}</span>
-      <span class="r"><span class="kind GPT">ChatGPT</span>${a.status!=="active"?`<span class="kind off">${esc(gStatus(a))}</span>`:""}<span class="kind fmt">${esc(GFMT[a.format]||a.format)}</span></span></button>`).join("")).join("");
+      <span class="r"><span class="kind GPT">ChatGPT</span>${a.status!=="active"?`<span class="kind off">${esc(gStatus(a))}</span>`:""}<span class="kind fmt">${esc(GFMT[a.format]||a.format)}</span>${copyBadges(a)}</span></button>`).join("")).join("");
 }
 function gAssets(ad){
   const len=(t,n)=>`<li><span class="st">${esc(t||"(none)")}</span><span class="sd">${[...(t||"")].length} of ${n} characters</span></li>`;
@@ -778,7 +803,7 @@ function gAssets(ad){
   return `<div class="phead"><h3>Live assets</h3><span class="src">Read from ChatGPT Ads ${esc(GPT.pulledAt)}</span></div>
     <div class="agrid"><section class="aset"><h3>Text</h3><ul class="slist">${len(ad.title,GLIMIT.title)}${len(ad.body,GLIMIT.body)}${ad.price?`<li><span class="st">${esc(ad.price)}</span><span class="sd">Price</span></li>`:""}</ul></section>
     ${chipList("Context hints (ad group)",st.hints)}</div>${media?`<div class="agrid media">${media}</div>`:""}
-    <div class="agrid media"><section class="aset wide"><h3>Bidding and targeting</h3><ul class="slist">${rows.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul>
+    ${copyPanel(ad,ad.status==="active")}<div class="agrid media"><section class="aset wide"><h3>Bidding and targeting</h3><ul class="slist">${rows.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul>
     ${st.groupNote?`<p class="csub">Ad group note: ${esc(st.groupNote)}</p>`:""}${st.campaignNote?`<p class="csub">Campaign note: ${esc(st.campaignNote)}</p>`:""}</section></div>`;
 }
 function gRenderDetail(){
@@ -843,7 +868,7 @@ function rRenderList(list){
   list.forEach(a=>{if(!groups.has(a.campaign))groups.set(a.campaign,[]);groups.get(a.campaign).push(a)});
   el.innerHTML=[...groups].map(([camp,items])=>`<div class="grp"><span>${esc(camp)}</span><span>Reddit</span></div>`+items.map(a=>`<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
       <span class="t">${esc(a.title)}</span><span class="s">${esc(a.adset)}</span>
-      <span class="r"><span class="kind RD">Reddit</span>${a.status!=="active"?`<span class="kind off">${esc(gStatus(a))}</span>`:""}<span class="kind fmt">${esc(RFMT[a.format]||a.format)}</span></span></button>`).join("")).join("");
+      <span class="r"><span class="kind RD">Reddit</span>${a.status!=="active"?`<span class="kind off">${esc(gStatus(a))}</span>`:""}<span class="kind fmt">${esc(RFMT[a.format]||a.format)}</span>${copyBadges(a)}</span></button>`).join("")).join("");
 }
 function rAssets(ad){
   const st=ad.settings||{};
@@ -858,7 +883,7 @@ function rAssets(ad){
   return `<div class="phead"><h3>Live assets</h3><span class="src">Read from Reddit Ads ${esc(RD.pulledAt)}</span></div>
     <div class="agrid"><section class="aset"><h3>Text</h3><ul class="slist">${txt(ad.headline||"(none)",[...(ad.headline||"")].length+" of 300 characters · headline")}${txt(ad.body,"Body text")}${txt(ad.cta,"Call to action")}${txt(ad.displayUrl,"Display URL")}</ul></section>
     ${cards}${chipList("Communities (ad group)",st.communities)}${chipList("Keywords (ad group)",st.keywords)}</div>${media?`<div class="agrid media">${media}</div>`:""}
-    <div class="agrid media"><section class="aset wide"><h3>Bidding and targeting</h3><ul class="slist">${rows.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul></section></div>`;
+    ${copyPanel(ad,ad.status==="active")}<div class="agrid media"><section class="aset wide"><h3>Bidding and targeting</h3><ul class="slist">${rows.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul></section></div>`;
 }
 function rRenderDetail(){
   const el=$("#detail");
@@ -917,7 +942,7 @@ function renderList(list){
       return `<button type="button" class="item" data-id="${esc(a.id)}" aria-current="${a.id===state.sel}">
         <span class="t">${esc(a.title)}</span>
         <span class="s">${a.served?"":"Not served · "}${esc(sub)}</span>
-        <span class="r"><span class="kind ${a.kind}">${KIND[a.kind]}</span>${right}</span></button>`;
+        <span class="r"><span class="kind ${a.kind}">${KIND[a.kind]}</span>${copyBadges(a)}${right}</span></button>`;
     }).join("");
   }).join("");
 }
@@ -933,6 +958,37 @@ document.addEventListener("pointerover",e=>{const el=e.target.closest("[data-tip
 document.addEventListener("pointermove",e=>{if(tip.hidden)return;const w=tip.offsetWidth,h=tip.offsetHeight;let x=e.clientX+14,y=e.clientY+14;if(x+w>innerWidth-8)x=e.clientX-w-14;if(y+h>innerHeight-8)y=e.clientY-h-14;tip.style.left=x+"px";tip.style.top=y+"px"});
 document.addEventListener("pointerleave",()=>{tip.hidden=true});
 const pct=(a,b)=>b?Math.round(a/b*100):0;
+
+/* ---------- copy check and promotions (every platform) ---------- */
+const CC=DATA.copyCheck||null;
+function promoAssets(ad){return((ad.ext||{}).promotions||[]).map(p=>{const code=(p.l||[]).find(l=>/^Code /.test(l));return{x:p.x,code:code?code.slice(5):"",more:(p.l||[]).filter(l=>l!==code&&l!=="unknown").join(" · ")}})}
+function copyBadges(a){
+  const c=a.copy;if(!c)return "";
+  const n=c.issues.length,code=(c.promos.codes[0]||{}).code||(promoAssets(a).find(p=>p.code)||{}).code;
+  const promo=code||c.promos.offers.length||promoAssets(a).length;
+  return (n?`<span class="kind qc" title="Copy check">${n} to fix</span>`:"")+(promo?`<span class="kind promo" title="Promotion in this ad">${esc(code||"Offer")}</span>`:"");
+}
+function qcMark(i){const t=i.text,a=Math.max(0,i.o-45),b=Math.min(t.length,i.o+i.n+45);
+  return `${a?"…":""}${esc(t.slice(a,i.o))}<mark>${i.n&&t.slice(i.o,i.o+i.n).trim()?esc(t.slice(i.o,i.o+i.n)):"&nbsp;"}</mark>${esc(t.slice(i.o+i.n,b))}${b<t.length?"…":""}`}
+function copyPanel(ad,running){
+  const c=ad.copy,assets=promoAssets(ad);if(!c&&!assets.length)return "";
+  const iss=c?c.issues:[],pr=c?c.promos:{codes:[],offers:[]},spell=!!(CC&&CC.spelling);
+  const how=spell?(c&&!c.checked?"Some of this copy is still waiting for its spelling and grammar check; it is checked on a coming refresh.":"Spelling, grammar and punctuation checked by LanguageTool, plus trademark symbols and doubled punctuation.")
+    :"Spelling and grammar are not checked yet: this server has no LanguageTool set (LANGUAGETOOL_URL). Checked here: trademark symbols (® and ™) and doubled punctuation.";
+  const check=`<section class="aset wide"><h3>Copy check ${iss.length?`<span class="n">${iss.length}</span>`:""}</h3><p class="csub">${esc(how)}</p>
+    ${iss.length?`<ul class="qlist">${iss.map(i=>`<li><span class="qk ${esc(i.kind.toLowerCase())}">${esc(i.kind)}</span><div><div class="qt">${qcMark(i)}</div><div class="qm">${esc(i.field)} · ${esc(i.msg)}${i.fix&&i.fix.length?` Try: <b>${i.fix.map(esc).join("</b>, <b>")}</b>`:""}</div></div></li>`).join("")}</ul>`
+      :`<p class="qok">✓ ${spell&&c&&c.checked?"No spelling, grammar or punctuation issues found.":"Nothing found by the checks that ran."}</p>`}</section>`;
+  const live=running?"Running now":"Not running: the ad is paused";
+  const rows=[...pr.codes.map(x=>`<li><span class="prow"><span class="pcode">${esc(x.code)}</span><span class="sd">Promo code in the ${esc(x.field.toLowerCase())}</span></span></li>`),
+    ...assets.map(a=>`<li><span class="prow"><span class="st">${esc(a.x)}</span>${a.code?`<span class="pcode">${esc(a.code)}</span>`:""}</span><span class="sd">Google promotion asset${a.code?"":", no promo code"}${a.more?" · "+esc(a.more):""}</span></li>`),
+    ...pr.offers.map(o=>`<li><span class="st">${esc(o.text)}</span><span class="sd">${esc(o.kind)} · in the ${esc(o.field.toLowerCase())}</span></li>`)];
+  const codes=pr.codes.length+assets.filter(a=>a.code).length;
+  const n=(k,one)=>k+" "+one+(k>1?"s":"");
+  const sum=[codes?n(codes,"promo code"):"No promo code",assets.length?n(assets.length,"Google promotion asset"):"",pr.offers.length?n(pr.offers.length,"offer")+" in the copy":""].filter(Boolean).join(", ");
+  const promo=`<section class="aset wide"><h3>Promotions</h3><p class="csub">${rows.length?`${esc(sum)}. ${esc(live)}.`:"No promo code or offer in this ad."}</p>
+    ${rows.length?`<ul class="slist">${rows.join("")}</ul>`:""}</section>`;
+  return `<div class="agrid media">${check}${promo}</div>`;
+}
 
 /* ---------- detail ---------- */
 function servedTexts(ad,pred){const s=new Set();ad.combos.forEach(c=>c.parts.forEach(p=>{if(pred(p.f)&&p.x)s.add(p.x)}));return[...s]}
@@ -992,12 +1048,12 @@ function assetsPanel(ad){
   const logo=logoFor(ad,[]),logos=(ad.logos&&ad.logos.length)?ad.logos:(logo?[logo]:[]);
   const imgExt=(x.images&&x.images.length)?x.images:servedImages(ad,"AD_IMAGE");
   const brand=[bizName(ad,[])].filter(Boolean);
-  const text=`<div class="agrid">${textList("Headlines",ad.headlines,LIMIT.headline,ad.pins)}${textList("Long headlines",ad.longHeadlines,LIMIT.long)}<div class="acol">${textList("Descriptions",ad.descriptions,LIMIT.description,ad.pins)}${commentBox(ad)}</div>${sitelinkList(sitelinks)}${chipList("Callouts",callouts)}${chipList("Structured snippets",snippets)}${detailList("Prices",x.prices)}${detailList("Promotions",x.promotions)}${detailList("Call",x.calls)}${detailList("App",x.apps)}${chipList("Business name",brand)}${ad.cta?chipList("Call to action",[prettyCta(ad.cta)]):""}</div>`;
+  const text=`<div class="agrid">${textList("Headlines",ad.headlines,LIMIT.headline,ad.pins)}${textList("Long headlines",ad.longHeadlines,LIMIT.long)}<div class="acol">${textList("Descriptions",ad.descriptions,LIMIT.description,ad.pins)}${commentBox(ad)}</div>${sitelinkList(sitelinks)}${chipList("Callouts",callouts)}${chipList("Structured snippets",snippets)}${detailList("Prices",x.prices)}${detailList("Call",x.calls)}${detailList("App",x.apps)}${chipList("Business name",brand)}${ad.cta?chipList("Call to action",[prettyCta(ad.cta)]):""}</div>`;
   const media=gallery("Images",ad.images)+gallery("Image extensions",imgExt.map(i=>({img:i})))+gallery("Logos",logos.map(l=>({img:l})))+gallery("Videos",ad.videoThumbs,true)+(ad.themes&&ad.themes.length?chipList("Search themes",ad.themes):"");
   const src=ad.live?`Live in Google Ads as of ${esc(DATA.liveExportedAt)}`
     :served?"Assets from the ad-copy sheet plus what Google served"
     :"Assets from the ad-copy sheet";
-  return `<div class="phead"><h3>${ad.live?"Live assets":"Assets"}</h3><span class="src">${src}</span></div>${text}${media?`<div class="agrid media">${media}</div>`:""}`;
+  return `<div class="phead"><h3>${ad.live?"Live assets":"Assets"}</h3><span class="src">${src}</span></div>${text}${media?`<div class="agrid media">${media}</div>`:""}${copyPanel(ad,true)}`;
 }
 
 /* Comments: served by main.py when the service has COMMENTS=on; anywhere else the box never appears. */

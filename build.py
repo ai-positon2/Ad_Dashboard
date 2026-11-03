@@ -24,6 +24,7 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 
+import copy_check
 import gads_api
 import gpt_api
 import meta_api
@@ -680,6 +681,44 @@ def load_reddit(assets, forced, logo=""):
     return {"account": dict(m["account"], icon=logo), "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
 
 
+def copy_fields(payload):
+    """{key: [(field, text)]}: every ad's words, per platform, for the copy check. Keys match what attach_copy writes back to."""
+    out = {}
+    for a in payload["ads"]:
+        e = a.get("ext") or {}
+        out["g:" + str(a["id"])] = ([("Headline", t) for t in a.get("headlines") or []] + [("Long headline", t) for t in a.get("longHeadlines") or []]
+                                   + [("Description", t) for t in a.get("descriptions") or []] + [("Sitelink", t) for s in e.get("sitelinks") or [] for t in [s.get("x")] + list(s.get("l") or [])]
+                                   + [("Callout", t) for t in e.get("callouts") or []] + [("Promotion", p.get("x")) for p in e.get("promotions") or []])
+    for a in (payload.get("meta") or {}).get("ads") or []:
+        out["m:" + a["id"]] = ([("Primary text", t) for t in a["primary"]] + [("Headline", t) for t in a["headline"]] + [("Description", t) for t in a["description"]]
+                               + [("Card " + f, c.get(k)) for c in a["cards"] for f, k in (("headline", "headline"), ("description", "description"))])
+    for a in (payload.get("reddit") or {}).get("ads") or []:
+        out["r:" + a["id"]] = [("Headline", a.get("headline")), ("Body", a.get("body"))] + [("Card caption", c.get("caption")) for c in a.get("cards") or []]
+    for a in (payload.get("gpt") or {}).get("ads") or []:
+        out["c:" + a["id"]] = [("Title", a.get("title")), ("Body", a.get("body"))]
+    return {k: [(f, t) for f, t in v if t and str(t).strip() and str(t).lower() != "unknown"] for k, v in out.items()}
+
+
+def attach_copy(payload):
+    """Each ad gets `copy`: {issues, promos, checked}. Never fatal: a failed check leaves the ads as they are and says so."""
+    log = []
+    try:
+        got = copy_check.review(copy_fields(payload), CLIENT, log)
+    except Exception as e:  # noqa: BLE001
+        print(f"! copy check failed ({e})")
+        return
+    payload["copyCheck"] = {"spelling": bool(copy_check.endpoint()), "log": log}
+    for a in payload["ads"]:
+        a["copy"] = got.get("g:" + str(a["id"]))
+    for plat, pre in (("meta", "m:"), ("reddit", "r:"), ("gpt", "c:")):
+        for a in (payload.get(plat) or {}).get("ads") or []:
+            a["copy"] = got.get(pre + a["id"])
+    n = sum(len(v["issues"]) for v in got.values())
+    print(f"Copy check: {len(got)} ads, {n} issues, spelling and grammar {'on' if copy_check.endpoint() else 'off (no LANGUAGETOOL_URL)'}")
+    for m in log:
+        print("  !", m)
+
+
 def main():
     forced = gads_api.FORCE.is_set() or os.environ.get("GADS_FORCE") == "1"  # read before the Google pull clears it, so a Refresh reads Meta again too
     x, api_data = load_tables()
@@ -734,6 +773,7 @@ def main():
     payload["meta"], payload["metaError"] = load_meta(assets, forced, logo=logo)
     payload["gpt"], payload["gptError"] = load_gpt(assets, forced, logo=logo)
     payload["reddit"], payload["redditError"] = load_reddit(assets, forced, logo=logo)
+    attach_copy(payload)
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8").replace("__CLIENT__", CLIENT["name"])
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)

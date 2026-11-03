@@ -28,7 +28,7 @@ from html import unescape
 import gads_api
 
 GRAPH = "https://graph.facebook.com/" + os.environ.get("META_API_VERSION", "v23.0").strip()
-CACHE_VERSION = 3              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too
+CACHE_VERSION = 4              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager
 # the ads read: running, paused at any level, and waiting on review; archived and deleted ones are left out
 STATUSES = ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED", "PENDING_REVIEW", "IN_PROCESS", "WITH_ISSUES", "DISAPPROVED", "PREAPPROVED", "PENDING_BILLING_INFO"]
 MAX_ADS = 300
@@ -53,7 +53,16 @@ FEATURES = {"standard_enhancements": "Standard enhancements", "image_touchups": 
             "pac_relaxation": "Use assets across placements", "multi_photo_to_video": "Turn images into a video", "translate_text": "Translate text", "3d_animation": "3D animation",
             "creative_stickers": "Stickers", "biz_ai": "Business AI", "hide_price": "Hide price", "local_store_extension": "Show local store details",
             "add_stickers": "Add stickers", "ig_video_native_subtitle": "Instagram captions", "image_auto_crop": "Image auto-crop", "profile_card": "Profile card",
-            "summary_sticker": "Summary sticker", "carousel_to_video": "Carousel to video", "dha_optimization": "Dynamic ad optimization"}
+            "summary_sticker": "Summary sticker", "carousel_to_video": "Carousel to video", "dha_optimization": "Dynamic ad optimization", "text_translation": "Translate text"}
+# where Ads Manager shows each one: "Creative setup" (site links, products) and "Advantage+ creative enhancements"; the rest are Meta's background switches
+SETUP = {"site_extensions": "Site links", "product_extensions": "Products", "local_store_extension": "Local store details"}
+CREATIVE = {"image_templates": "Add overlays", "add_text_overlay": "Add text overlays", "image_touchups": "Visual touch-ups", "music": "Add music", "audio": "Add music",
+            "text_optimizations": "Optimize text per person", "enhance_cta": "Enhance CTA", "inline_comment": "Relevant comments", "image_animation": "Image animation",
+            "image_brightness_and_contrast": "Adjust brightness and contrast", "reveal_details_over_time": "Reveal details over time", "show_summary": "Show summary",
+            "show_destination_blurbs": "Show destination details", "image_uncrop": "Expand image", "image_background_gen": "Generate backgrounds",
+            "video_auto_crop": "Video auto-crop", "image_auto_crop": "Image auto-crop", "description_automation": "Add descriptions", "multi_photo_to_video": "Turn images into a video",
+            "translate_text": "Translate text", "text_translation": "Translate text", "adapt_to_placement": "Adapt to placement", "product_metadata_automation": "Add product tags",
+            "add_stickers": "Add stickers", "creative_stickers": "Add stickers", "3d_animation": "3D animation", "standard_enhancements": "Standard enhancements"}
 GOALS = {"OFFSITE_CONVERSIONS": "Conversions", "LINK_CLICKS": "Link clicks", "LANDING_PAGE_VIEWS": "Landing page views", "IMPRESSIONS": "Impressions", "REACH": "Reach",
          "THRUPLAY": "ThruPlay", "VALUE": "Conversion value", "LEAD_GENERATION": "Leads", "QUALITY_LEAD": "Quality leads", "POST_ENGAGEMENT": "Post engagement",
          "AD_RECALL_LIFT": "Ad recall lift", "CONVERSATIONS": "Conversations", "APP_INSTALLS": "App installs", "PAGE_LIKES": "Page likes", "TWO_SECOND_CONTINUOUS_VIDEO_VIEWS": "2-second video views"}
@@ -234,18 +243,22 @@ def placement_media(feed, labelled):
 
 
 def enhancements(cr):
-    """{on: [], off: [], multiAdvertiser: on|off|""}: the Advantage+ creative enhancements of a creative, in Ads Manager's words."""
+    """{on: [], off: [], items: [{label, group: setup|creative|other, on}], multiAdvertiser: on|off|""}: the Advantage+ creative enhancements of a creative,
+    in Ads Manager's words and under its headings. A switch Meta sends under two names is listed once, on if either is on."""
     spec = ((cr or {}).get("degrees_of_freedom_spec") or {}).get("creative_features_spec") or {}
-    on, off = [], []
+    on, off, items = [], [], {}
     for k, v in spec.items():
         status = str((v or {}).get("enroll_status") or "").upper() if isinstance(v, dict) else ""
-        label = FEATURES.get(k, k.replace("_", " ").capitalize())
-        if status == "OPT_IN":
-            on.append(label)
-        elif status == "OPT_OUT":
-            off.append(label)
+        if status not in ("OPT_IN", "OPT_OUT"):
+            continue
+        group, label = ("setup", SETUP[k]) if k in SETUP else ("creative", CREATIVE[k]) if k in CREATIVE else ("other", FEATURES.get(k, k.replace("_", " ").capitalize()))
+        (on if status == "OPT_IN" else off).append(FEATURES.get(k, label))
+        prev = items.get((group, label))
+        items[(group, label)] = {"label": label, "group": group, "on": status == "OPT_IN" or bool(prev and prev["on"])}
     multi = str(((cr or {}).get("contextual_multi_ads") or {}).get("enroll_status") or "").upper()
-    return {"on": _uniq(sorted(on)), "off": _uniq(sorted(off)), "multiAdvertiser": "on" if multi == "OPT_IN" else "off" if multi == "OPT_OUT" else ""}
+    order = {"setup": 0, "creative": 1, "other": 2}
+    return {"on": _uniq(sorted(on)), "off": _uniq(sorted(off)), "items": sorted(items.values(), key=lambda i: (order[i["group"]], not i["on"], i["label"])),
+            "multiAdvertiser": "on" if multi == "OPT_IN" else "off" if multi == "OPT_OUT" else ""}
 
 
 def optimization(ad):
