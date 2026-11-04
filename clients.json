@@ -43,6 +43,7 @@
   "soteri": {
     "name": "Soteri Skin",
     "domain": "soteriskin.com",
+    "download": true,
     "copy_allow": ["ceramide", "ceramides", "antiflare", "moisturization", "Rafal", "Pielak"],
     "meta_account_id": "261215873024315",
     "account_prefix": "",

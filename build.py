@@ -25,6 +25,7 @@ import pandas as pd
 from PIL import Image
 
 import copy_check
+import export_xlsx
 import gads_api
 import gpt_api
 import meta_api
@@ -774,6 +775,14 @@ def main():
     payload["gpt"], payload["gptError"] = load_gpt(assets, forced, logo=logo)
     payload["reddit"], payload["redditError"] = load_reddit(assets, forced, logo=logo)
     attach_copy(payload, forced)
+    DIST.mkdir(parents=True, exist_ok=True)
+    if CLIENT.get("download"):  # the ads as an Excel file, from the same data as the page
+        try:
+            export_xlsx.write(payload, DIST / (export_xlsx.FILE + ".tmp"))
+            (DIST / (export_xlsx.FILE + ".tmp")).replace(DIST / export_xlsx.FILE)
+            payload["download"] = export_xlsx.FILE
+        except Exception as e:  # noqa: BLE001
+            print(f"! Excel download failed ({e})")
     template = (ROOT / "dashboard" / "template.html").read_text(encoding="utf-8").replace("__CLIENT__", CLIENT["name"])
     blob = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
     html = template.replace("/*__DATA__*/null", blob)
