@@ -28,7 +28,7 @@ from html import unescape
 import gads_api
 
 GRAPH = "https://graph.facebook.com/" + os.environ.get("META_API_VERSION", "v23.0").strip()
-CACHE_VERSION = 4              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager
+CACHE_VERSION = 5              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager; 5: no leftover story picture
 # the ads read: running, paused at any level, and waiting on review; archived and deleted ones are left out
 STATUSES = ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED", "PENDING_REVIEW", "IN_PROCESS", "WITH_ISSUES", "DISAPPROVED", "PREAPPROVED", "PENDING_BILLING_INFO"]
 MAX_ADS = 300
@@ -171,6 +171,7 @@ def creative_parts(cr):
             images.append({"url": src.get("picture") or src.get("url")})
     if video.get("video_id"):
         videos.append({"id": str(video["video_id"]), "thumb": video.get("image_url") or ""})
+    story_imgs, story_vids = len(images), len(videos)
     for c in link.get("child_attachments") or []:
         card = {"headline": _txt(c.get("name")), "description": _txt(c.get("description")), "link": c.get("link") or "",
                 "cta": ((c.get("call_to_action") or {}).get("type") or "")}
@@ -194,6 +195,14 @@ def creative_parts(cr):
             videos.append({"id": str(v["video_id"]), "thumb": v.get("thumbnail_url") or ""})
             for lab in v.get("adlabels") or []:
                 labelled[("video", lab.get("name"))] = ("video", len(videos) - 1)
+    # An ad with its own asset feed pictures or videos shows only those: a picture still in its story spec is a leftover (a duplicated ad keeps the
+    # first ad's picture there) that Meta does not show, so it is dropped and the placement slots counted without it.
+    if story_imgs and (len(images) > story_imgs or len(videos) > story_vids):
+        images = images[story_imgs:]
+        labelled = {k: (kind, i - story_imgs) if kind == "image" else (kind, i) for k, (kind, i) in labelled.items()}
+    if story_vids and len(videos) > story_vids:
+        videos = videos[story_vids:]
+        labelled = {k: (kind, i - story_vids) if kind == "video" else (kind, i) for k, (kind, i) in labelled.items()}
     if not images and not videos and not cards:
         if cr.get("video_id"):
             videos.append({"id": str(cr["video_id"]), "thumb": cr.get("thumbnail_url") or ""})

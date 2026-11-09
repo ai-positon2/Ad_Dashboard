@@ -63,6 +63,17 @@ def test_a_single_image_with_a_stories_version_is_a_single_image_with_its_placem
     assert p["slots"] == {"story": {"kind": "image", "i": 1}, "feed": {"kind": "image", "i": 0}}
 
 
+def test_a_duplicated_ad_does_not_show_the_first_ads_leftover_picture():
+    # a copy keeps the first ad's picture in its story spec; Meta shows only the asset feed's pictures
+    left = {"page_id": "111", "link_data": {"image_hash": "old", "link": "https://soteriskin.com"}}
+    f = meta_api.creative_parts(dict(FLEX, object_story_spec=left))
+    assert f["images"] == [{"hash": "h3"}, {"hash": "h4"}]
+    s = meta_api.creative_parts(dict(SINGLE, object_story_spec=left))
+    assert s["images"] == [{"hash": "sq"}, {"hash": "tall"}] and s["slots"] == {"story": {"kind": "image", "i": 1}, "feed": {"kind": "image", "i": 0}}
+    # with no asset feed pictures or videos, the story spec's picture is the ad's picture
+    assert meta_api.creative_parts({"object_story_spec": left, "asset_feed_spec": {"bodies": [{"text": "x"}]}})["images"] == [{"hash": "old"}]
+
+
 def test_advantage_plus_enhancements_and_delivery_settings_are_in_ads_managers_words():
     e = meta_api.enhancements(SINGLE)
     assert e["on"] == ["Add music", "Add overlays", "Relevant comments", "Visual touch-ups"] and e["multiAdvertiser"] == "off"
