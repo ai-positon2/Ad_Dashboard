@@ -70,6 +70,12 @@ def test_a_duplicated_ad_does_not_show_the_first_ads_leftover_picture():
     assert f["images"] == [{"hash": "h3"}, {"hash": "h4"}]
     s = meta_api.creative_parts(dict(SINGLE, object_story_spec=left))
     assert s["images"] == [{"hash": "sq"}, {"hash": "tall"}] and s["slots"] == {"story": {"kind": "image", "i": 1}, "feed": {"kind": "image", "i": 0}}
+    # an unlabelled picture in the feed that no placement rule names is not shown by Meta either
+    extra = dict(SINGLE["asset_feed_spec"], images=[{"hash": "old"}] + SINGLE["asset_feed_spec"]["images"])
+    e = meta_api.creative_parts(dict(SINGLE, asset_feed_spec=extra))
+    assert e["images"] == [{"hash": "sq"}, {"hash": "tall"}] and e["slots"] == {"story": {"kind": "image", "i": 1}, "feed": {"kind": "image", "i": 0}}
+    # with no placement rules (Meta mixes them all), every picture stays
+    assert len(meta_api.creative_parts(FLEX)["images"]) == 2
     # with no asset feed pictures or videos, the story spec's picture is the ad's picture
     assert meta_api.creative_parts({"object_story_spec": left, "asset_feed_spec": {"bodies": [{"text": "x"}]}})["images"] == [{"hash": "old"}]
 

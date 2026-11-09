@@ -28,7 +28,7 @@ from html import unescape
 import gads_api
 
 GRAPH = "https://graph.facebook.com/" + os.environ.get("META_API_VERSION", "v23.0").strip()
-CACHE_VERSION = 5              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager; 5: no leftover story picture
+CACHE_VERSION = 6              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager; 5: no leftover story picture; 6: only pictures a placement rule names
 # the ads read: running, paused at any level, and waiting on review; archived and deleted ones are left out
 STATUSES = ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED", "PENDING_REVIEW", "IN_PROCESS", "WITH_ISSUES", "DISAPPROVED", "PREAPPROVED", "PENDING_BILLING_INFO"]
 MAX_ADS = 300
@@ -203,6 +203,14 @@ def creative_parts(cr):
     if story_vids and len(videos) > story_vids:
         videos = videos[story_vids:]
         labelled = {k: (kind, i - story_vids) if kind == "video" else (kind, i) for k, (kind, i) in labelled.items()}
+    # With placement rules, Meta shows only the pictures and videos a rule names: an unnamed one (a copied ad keeps the first ad's picture in its
+    # feed) is never shown, so it is dropped.
+    rules = [r for r in feed.get("asset_customization_rules") or [] if isinstance(r, dict)]
+    for kind, media in (("image", images), ("video", videos)):
+        used = sorted({labelled[(kind, (r.get(kind + "_label") or {}).get("name"))][1] for r in rules if (kind, (r.get(kind + "_label") or {}).get("name")) in labelled})
+        if used and len(used) < len(media):
+            media[:] = [media[i] for i in used]
+            labelled = {k: (kk, used.index(i)) if kk == kind and i in used else (kk, i) for k, (kk, i) in labelled.items() if kk != kind or i in used}
     if not images and not videos and not cards:
         if cr.get("video_id"):
             videos.append({"id": str(cr["video_id"]), "thumb": cr.get("thumbnail_url") or ""})
