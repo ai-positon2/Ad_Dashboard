@@ -610,7 +610,7 @@ function mCombos(ad){
     if(ad.format==="carousel"&&ad.cards.length)out.push({media:"cards",primary:P[0],headline:H[0],description:D});
     else{
       const M=[...ad.images.map(img=>({media:"image",img})),...ad.videos.map(v=>({media:"video",img:v.thumb,url:v.url}))];
-      const flex=ad.format==="flexible";
+      const flex=ad.format==="flexible"&&!Object.keys(ad.slots||{}).length;  /* a flexible ad with placement rules shows each placement's own picture, as Meta does */
       (flex&&M.length?M:[M[0]||{media:"none"}]).forEach(m=>P.forEach(p=>H.forEach(h=>{if(out.length<12)out.push(Object.assign({primary:p,headline:h,description:D,placed:!flex},m))})));
     }
     ad._mc=out;
@@ -721,7 +721,9 @@ function mRenderDetail(){
   const c=combos[state.combo];
   const slotNote=ad.slots&&ad.slots.story&&ad.slots.feed?" It has its own picture for Stories and Reels, shown in the Instagram Story preview.":"";
   const textNote=combos.length>1&&ad.format!=="flexible"?` Meta tries its ${ad.primary.length>1?ad.primary.length+" primary texts":""}${ad.primary.length>1&&ad.headline.length>1?" and ":""}${ad.headline.length>1?ad.headline.length+" headlines":""} on each person and does not report which one it shows, so the list on the right steps through them.`:"";
-  const note=ad.format==="flexible"?`Flexible format: Meta picks the format and mixes these texts and pictures itself, and does not report which mix it shows, so these are ${combos.length} of the combinations it can make.`
+  const ruled=ad.format==="flexible"&&Object.keys(ad.slots||{}).length;
+  const note=ruled?`Flexible format with a picture set for each placement: the preview shows the picture Meta uses there, as Meta's own preview does. Any other picture under Images is set for the remaining placements.${slotNote}`
+    :ad.format==="flexible"?`Flexible format: Meta picks the format and mixes these texts and pictures itself, and does not report which mix it shows, so these are ${combos.length} of the combinations it can make.`
     :ad.format==="carousel"?"A carousel: scroll the cards in the Facebook preview. Instagram shows the first card here."
     :`${MFMT[ad.format]||"An ad"}, drawn from the ad as it is set up in Meta now.${slotNote}${textNote}`;
   const clist=combos.length>1?combos.map((x,i)=>`<button type="button" class="combo" data-i="${i}" aria-pressed="${i===state.combo}"><span class="rk">#${i+1}</span><span class="tx">${esc(x.headline||"(no headline)")}${x.primary?`<span class="d"> · ${esc(x.primary)}</span>`:""}</span><span class="im">${esc(x.placed?"":x.media==="video"?"Video"+(ad.videos.length>1?" "+(ad.videos.findIndex(v=>v.thumb===x.img)+1):""):x.media==="image"?"Image"+(ad.images.length>1?" "+(ad.images.indexOf(x.img)+1):""):"")}</span></button>`).join(""):"";
