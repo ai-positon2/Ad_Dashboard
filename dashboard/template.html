@@ -1258,7 +1258,9 @@ function render(){
 $("#f-campaign").onchange=e=>{state.campaign=e.target.value;render()};
 $("#f-q").oninput=e=>{state.q=e.target.value;render()};
 $("#f-unserved").onchange=e=>{state.unserved=e.target.checked;render()};
-const hm=location.hash.match(/^#ad-(.+)$/),mm=location.hash.match(/^#meta-(.+)$/),gm=location.hash.match(/^#gpt-(.+)$/),rm=location.hash.match(/^#reddit-(.+)$/);
+/* the comment emails link #ad-<comment key>: #ad-meta:<id>, #ad-rd:<id> and #ad-gpt:<id> open that platform's ad */
+const hash=(()=>{let h=location.hash;try{h=decodeURIComponent(h)}catch(e){}return h.replace(/^#ad-meta:/,"#meta-").replace(/^#ad-rd:/,"#reddit-").replace(/^#ad-gpt:/,"#gpt-")})();
+const hm=hash.match(/^#ad-(.+)$/),mm=hash.match(/^#meta-(.+)$/),gm=hash.match(/^#gpt-(.+)$/),rm=hash.match(/^#reddit-(.+)$/);
 if(mm&&hasMeta){state.plat="meta";const m=mads.find(a=>a.rawId===mm[1]);if(m){state.sel=m.id;if(!mOn(m))state.mstat="All"}}
 else if(gm&&hasGpt){state.plat="gpt";const g=gptAds.find(a=>a.rawId===gm[1]);if(g){state.sel=g.id;if(g.status!=="active")state.gstat="All"}}
 else if(rm&&hasReddit){state.plat="reddit";const r=rdAds.find(a=>a.rawId===rm[1]);if(r){state.sel=r.id;if(r.status!=="active")state.rstat="All"}}

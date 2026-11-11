@@ -233,6 +233,22 @@ def write_summary(facts):
         return json.loads(r.read())["choices"][0]["message"]["content"].strip()
 
 
+def comment_places(data):
+    """{comment's ad key: {account, campaign, adGroup, kind}} for every platform's ads, for the comment emails. Google ads are keyed by
+    their id, the others as the page keys them (meta:<id>, rd:<id>, gpt:<id>)."""
+    out = {}
+    for a in data.get("ads") or []:
+        out[str(a.get("id"))] = {k: a.get(k, "") for k in ("account", "campaign", "adGroup", "kind")}
+    for key, prefix, label in (("meta", "meta:", "Meta"), ("reddit", "rd:", "Reddit"), ("gpt", "gpt:", "ChatGPT")):
+        plat = data.get(key) or {}
+        account = (plat.get("account") or {}).get("name") or ""
+        for a in plat.get("ads") or []:
+            name = a.get("name") or a.get("headline") or a.get("title") or ""
+            out[prefix + str(a.get("id"))] = {"account": account, "campaign": a.get("campaign") or "", "adGroup": a.get("adset") or "",
+                                              "kind": label + " ad" + (": " + name if name else "")}
+    return out
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
                       ".html": "text/html; charset=utf-8", ".json": "application/json; charset=utf-8",
@@ -380,13 +396,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         except ValueError:
             after = 0
         try:
-            ads = {a["id"]: a for a in json.loads((site.dist / "data.json").read_text(encoding="utf-8"))["ads"]}
-        except (OSError, ValueError, KeyError):
-            ads = {}
+            places = comment_places(json.loads((site.dist / "data.json").read_text(encoding="utf-8")))
+        except (OSError, ValueError, KeyError, TypeError):
+            places = {}
         new = comments.after(site.key, after)
         for c in new:
-            a = ads.get(c["ad"], {})
-            c["where"] = {k: a.get(k, "") for k in ("account", "campaign", "adGroup", "kind")}
+            c["where"] = places.get(c["ad"]) or {"account": "", "campaign": "", "adGroup": "", "kind": ""}
         self._json(200, {"client": site.cfg["name"], "comments": new, "last": max([after] + [c["id"] for c in new])})
 
     # ------------------------------------------------------------- responses
