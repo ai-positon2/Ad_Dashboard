@@ -809,7 +809,7 @@ function gAssets(ad){
     st.productFeed?["Campaign","Product feed"]:null,["Review",ad.review]].filter(r=>r&&r[1]);
   const media=ad.images.length?gallery(ad.format==="multi"?"Images":"Image",ad.images.map(img=>({img}))):"";
   return `<div class="phead"><h3>Live assets</h3><span class="src">Read from ChatGPT Ads ${esc(GPT.pulledAt)}</span></div>
-    <div class="agrid"><section class="aset"><h3>Text</h3><ul class="slist">${len(ad.title,GLIMIT.title)}${len(ad.body,GLIMIT.body)}${ad.price?`<li><span class="st">${esc(ad.price)}</span><span class="sd">Price</span></li>`:""}</ul></section>
+    <div class="agrid"><div class="acol"><section class="aset"><h3>Text</h3><ul class="slist">${len(ad.title,GLIMIT.title)}${len(ad.body,GLIMIT.body)}${ad.price?`<li><span class="st">${esc(ad.price)}</span><span class="sd">Price</span></li>`:""}</ul></section>${commentBox(ad)}</div>
     ${chipList("Context hints (ad group)",st.hints)}</div>${media?`<div class="agrid media">${media}</div>`:""}
     ${copyPanel(ad,ad.status==="active")}<div class="agrid media"><section class="aset wide"><h3>Bidding and targeting</h3><ul class="slist">${rows.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul>
     ${st.groupNote?`<p class="csub">Ad group note: ${esc(st.groupNote)}</p>`:""}${st.campaignNote?`<p class="csub">Campaign note: ${esc(st.campaignNote)}</p>`:""}</section></div>`;
@@ -889,7 +889,7 @@ function rAssets(ad){
   const media=ad.format==="carousel"?gallery("Carousel cards",ad.cards.filter(c=>c.image).map(c=>({img:c.image,f:c.caption}))):ad.images.length?gallery(ad.format==="video"?"Video thumbnail":"Image",ad.images.map(img=>({img}))):"";
   const cards=ad.format==="carousel"?`<section class="aset"><h3>Cards <span class="n">${ad.cards.length}</span></h3><ul class="slist">${ad.cards.map((c,i)=>txt(c.caption||"(no caption)",`Card ${i+1}${c.cta?" · "+c.cta:""}${c.link?" · "+domainOf(c.link):""}`)).join("")}</ul></section>`:"";
   return `<div class="phead"><h3>Live assets</h3><span class="src">Read from Reddit Ads ${esc(RD.pulledAt)}</span></div>
-    <div class="agrid"><section class="aset"><h3>Text</h3><ul class="slist">${txt(ad.headline||"(none)",[...(ad.headline||"")].length+" of 300 characters · headline")}${txt(ad.body,"Body text")}${txt(ad.cta,"Call to action")}${txt(ad.displayUrl,"Display URL")}</ul></section>
+    <div class="agrid"><div class="acol"><section class="aset"><h3>Text</h3><ul class="slist">${txt(ad.headline||"(none)",[...(ad.headline||"")].length+" of 300 characters · headline")}${txt(ad.body,"Body text")}${txt(ad.cta,"Call to action")}${txt(ad.displayUrl,"Display URL")}</ul></section>${commentBox(ad)}</div>
     ${cards}${chipList("Communities (ad group)",st.communities)}${chipList("Keywords (ad group)",st.keywords)}</div>${media?`<div class="agrid media">${media}</div>`:""}
     ${copyPanel(ad,ad.status==="active")}<div class="agrid media"><section class="aset wide"><h3>Bidding and targeting</h3><ul class="slist">${rows.map(([k,v])=>`<li><span class="sd">${esc(k)}</span><span class="st">${esc(v)}</span></li>`).join("")}</ul></section></div>`;
 }
