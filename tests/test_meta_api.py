@@ -114,6 +114,7 @@ def test_ugc_check_only_applies_to_ads_named_ugc_and_flags_each_problem():
     one = {"on": True, "fb": True, "ig": False, "fbId": "9", "igId": ""}
     both = {"on": True, "fb": True, "ig": True, "fbId": "9", "igId": "8"}
     assert meta_api.ugc_check("Facial offer", "444", "111", both) is None  # no "UGC" in the name: not checked
+    assert meta_api.ugc_check("Ad1100_Video_UGC-Dewan_Kit_V1", "444", "111", off) == {"problems": ["Partnership ads is off"]}  # "_" before UGC still counts
     assert meta_api.ugc_check("UGC - Jane's facial", "444", "111", off) == {"problems": ["Partnership ads is off"]}
     assert meta_api.ugc_check("Jane UGC v2", "444", "111", one) == {"problems": ["Only the Facebook identity is linked"]}
     assert meta_api.ugc_check("ugc jane", "111", "111", both) == {"problems": ["The brand is the primary identity; the creator should be primary and the brand secondary"]}

@@ -29,7 +29,7 @@ from html import unescape
 import gads_api
 
 GRAPH = "https://graph.facebook.com/" + os.environ.get("META_API_VERSION", "v23.0").strip()
-CACHE_VERSION = 7              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager; 5: no leftover story picture; 6: only pictures a placement rule names; 7: the UGC partnership-ad check
+CACHE_VERSION = 8              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager; 5: no leftover story picture; 6: only pictures a placement rule names; 7: the UGC partnership-ad check; 8: "UGC" is matched with "_" or "-" next to it too
 # the ads read: running, paused at any level, and waiting on review; archived and deleted ones are left out
 STATUSES = ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED", "PENDING_REVIEW", "IN_PROCESS", "WITH_ISSUES", "DISAPPROVED", "PREAPPROVED", "PENDING_BILLING_INFO"]
 MAX_ADS = 300
@@ -44,7 +44,7 @@ EXTRA_FIELDS = ("id,name,effective_status,created_time,campaign{id,name,objectiv
                 "creative{id,name,object_type,title,body,image_url,image_hash,thumbnail_url,video_id,call_to_action_type,link_url,"
                 "object_story_spec,asset_feed_spec,instagram_permalink_url,effective_object_story_id,degrees_of_freedom_spec,contextual_multi_ads,"
                 "facebook_branded_content,instagram_branded_content}")
-UGC_NAME = re.compile(r"\bugc\b", re.I)   # an ad is a "UGC ad" when its own name says so
+UGC_NAME = re.compile(r"(?<![A-Za-z])ugc(?![A-Za-z])", re.I)   # an ad is a "UGC ad" when its own name says so; "_" and "-" don't block the match (ad names use them as separators)
 # Meta's API names for the Advantage+ creative enhancements, in the words Ads Manager uses; a name not here is shown in plain words
 FEATURES = {"standard_enhancements": "Standard enhancements", "image_touchups": "Visual touch-ups", "image_templates": "Add overlays", "add_text_overlay": "Add text overlays",
             "image_brightness_and_contrast": "Adjust brightness and contrast", "enhance_cta": "Enhance CTA", "inline_comment": "Relevant comments",
