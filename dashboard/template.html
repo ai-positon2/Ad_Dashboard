@@ -345,7 +345,7 @@ dialog.sum::backdrop{background:rgb(8 10 14 / .55)}
 .mf.st .scta{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:#fff;color:#111;border-radius:99px;padding:8px 18px;font-weight:600;font-size:14px;white-space:nowrap}
 .kind.GPT{background:#E6F4EF;color:#0B7A5A}
 .kind.off{background:var(--s-average-bg);color:var(--s-average)}
-.kind.qc{background:var(--s-poor-bg);color:var(--s-poor)}.kind.promo{background:var(--s-good-bg);color:var(--s-good)}
+.kind.qc{background:var(--s-poor-bg);color:var(--s-poor)}.kind.promo{background:var(--s-good-bg);color:var(--s-good)}.kind.ugc{background:var(--s-poor-bg);color:var(--s-poor)}
 .kind.RD{background:#FFE9E0;color:#C23A00}
 /* ---------- Reddit previews ---------- */
 .rc{--r-bg:#FFFFFF;--r-ink:#0F1A1C;--r-sub:#576F76;--r-line:#E5EBEE;--r-btn:#E5EBEE;--r-cta:#0A449B;--r-skel:#EEF1F3;
@@ -974,7 +974,11 @@ function copyBadges(a){
   const c=a.copy;if(!c)return "";
   const n=c.issues.length,code=(c.promos.codes[0]||{}).code||(promoAssets(a).find(p=>p.code)||{}).code;
   const promo=code||c.promos.offers.length||promoAssets(a).length;
-  return (n?`<span class="kind qc" title="Copy check">${n} to fix</span>`:"")+(promo?`<span class="kind promo" title="Promotion in this ad">${esc(code||"Offer")}</span>`:"");
+  return (n?`<span class="kind qc" title="Copy check">${n} to fix</span>`:"")+(promo?`<span class="kind promo" title="Promotion in this ad">${esc(code||"Offer")}</span>`:"")+ugcBadge(a);
+}
+function ugcBadge(a){
+  const u=a.ugc;if(!u||!u.problems.length)return "";
+  return `<span class="kind ugc" title="${esc(u.problems.join("; "))}">UGC: ${u.problems.length===1?esc(u.problems[0]):u.problems.length+" issues"}</span>`;
 }
 function qcMark(i){const t=i.text,a=Math.max(0,i.o-45),b=Math.min(t.length,i.o+i.n+45);
   return `${a?"…":""}${esc(t.slice(a,i.o))}<mark>${i.n&&t.slice(i.o,i.o+i.n).trim()?esc(t.slice(i.o,i.o+i.n)):"&nbsp;"}</mark>${esc(t.slice(i.o+i.n,b))}${b<t.length?"…":""}`}

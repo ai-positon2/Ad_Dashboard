@@ -100,6 +100,27 @@ def test_placements_chosen_or_automatic():
     assert meta_api.placements({})["automatic"] is True and "facebook" in meta_api.placements(None)["networks"]
 
 
+def test_branded_content_reads_whichever_identities_are_linked():
+    assert meta_api.branded_content({}) == {"on": False, "fb": False, "ig": False, "fbId": "", "igId": ""}
+    assert meta_api.branded_content({"facebook_branded_content": {}, "instagram_branded_content": {}}) == {"on": False, "fb": False, "ig": False, "fbId": "", "igId": ""}
+    both = meta_api.branded_content({"facebook_branded_content": {"page_id": "222"}, "instagram_branded_content": {"creator_igsid": "333"}})
+    assert both == {"on": True, "fb": True, "ig": True, "fbId": "222", "igId": "333"}
+    fb_only = meta_api.branded_content({"facebook_branded_content": {"page_id": "222"}})
+    assert fb_only == {"on": True, "fb": True, "ig": False, "fbId": "222", "igId": ""}
+
+
+def test_ugc_check_only_applies_to_ads_named_ugc_and_flags_each_problem():
+    off = {"on": False, "fb": False, "ig": False, "fbId": "", "igId": ""}
+    one = {"on": True, "fb": True, "ig": False, "fbId": "9", "igId": ""}
+    both = {"on": True, "fb": True, "ig": True, "fbId": "9", "igId": "8"}
+    assert meta_api.ugc_check("Facial offer", "444", "111", both) is None  # no "UGC" in the name: not checked
+    assert meta_api.ugc_check("UGC - Jane's facial", "444", "111", off) == {"problems": ["Partnership ads is off"]}
+    assert meta_api.ugc_check("Jane UGC v2", "444", "111", one) == {"problems": ["Only the Facebook identity is linked"]}
+    assert meta_api.ugc_check("ugc jane", "111", "111", both) == {"problems": ["The brand is the primary identity; the creator should be primary and the brand secondary"]}
+    assert meta_api.ugc_check("UGC Jane", "444", "111", both) == {"problems": []}  # creator primary, brand secondary, both identities on
+    assert meta_api.ugc_check("UGC Jane", "444", "", both) == {"problems": []}  # no brand page known yet: nothing to compare the primary identity against
+
+
 class FakeGraph:
     """Answers each Graph path the pull asks for; records the asks."""
 
@@ -146,6 +167,7 @@ def test_a_pull_reads_ads_pictures_videos_page_and_previews(monkeypatch=None):
     img, vid = out["ads"]
     assert img["images"] == ["https://scontent.x/h1.jpg"] and img["ctaText"] == "Book now" and img["page"]["ig"] == "soteriskin" and img["placements"]["automatic"] is True
     assert img["previews"][0] == {"format": "MOBILE_FEED_STANDARD", "label": "Facebook feed", "url": "https://www.facebook.com/ads/api/preview_iframe.php?d=AQ&t=AQ"} and len(img["previews"]) == 3
+    assert img["ugc"] is None and vid["ugc"] is None  # neither ad's name says "UGC"
     assert vid["ctaText"] == "Learn more"
     assert vid["videos"] == [{"id": "900", "thumb": "https://x/big.jpg", "url": "https://www.facebook.com/soteri/videos/900/", "length": 14.5}] and vid["placements"]["networks"] == ["instagram"]
 
@@ -176,6 +198,26 @@ def test_when_meta_refuses_the_extra_fields_the_ads_are_read_without_them():
     finally:
         meta_api.Api = orig
     assert len(out["ads"]) == 2 and out["ads"][0]["enhancements"] == {"on": [], "off": [], "items": [], "multiAdvertiser": ""} and "Advantage+" in out["log"][0]
+
+
+def test_a_pull_flags_a_ugc_ad_whose_partnership_setup_is_wrong():
+    class WithUGC(FakeGraph):
+        def pages(self, path, params, limit=meta_api.MAX_ADS):
+            if path.endswith("/ads"):
+                return [{"id": "1", "name": "Facial offer", "effective_status": "ACTIVE", "campaign": {"name": "Prospecting"}, "adset": {"targeting": {}}, "creative": IMAGE},
+                        {"id": "2", "name": "Brand offer", "effective_status": "ACTIVE", "campaign": {"name": "Prospecting"}, "adset": {"targeting": {}}, "creative": IMAGE},
+                        {"id": "3", "name": "UGC - Jane's facial", "effective_status": "ACTIVE", "campaign": {"name": "Prospecting"}, "adset": {"targeting": {}}, "creative": IMAGE}]
+            return super().pages(path, params, limit)
+    fake = WithUGC()
+    orig = meta_api.Api
+    meta_api.Api = lambda: fake
+    try:
+        out = meta_api.pull({"meta_account_id": "261215873024315"})
+    finally:
+        meta_api.Api = orig
+    ugc = next(a for a in out["ads"] if a["id"] == "3")
+    assert ugc["ugc"] == {"problems": ["Partnership ads is off"]}        # page 111 is the account's usual (brand) page and this ad has no branded content at all
+    assert next(a for a in out["ads"] if a["id"] == "1")["ugc"] is None  # not named UGC: not checked
 
 
 def test_without_a_token_or_an_account_nothing_is_read():

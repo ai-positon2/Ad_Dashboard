@@ -21,6 +21,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from html import unescape
@@ -28,7 +29,7 @@ from html import unescape
 import gads_api
 
 GRAPH = "https://graph.facebook.com/" + os.environ.get("META_API_VERSION", "v23.0").strip()
-CACHE_VERSION = 6              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager; 5: no leftover story picture; 6: only pictures a placement rule names
+CACHE_VERSION = 7              # 2: the real format, placement pictures, Advantage+ and optimization settings; 3: paused ads too; 4: enhancements grouped as in Ads Manager; 5: no leftover story picture; 6: only pictures a placement rule names; 7: the UGC partnership-ad check
 # the ads read: running, paused at any level, and waiting on review; archived and deleted ones are left out
 STATUSES = ["ACTIVE", "PAUSED", "CAMPAIGN_PAUSED", "ADSET_PAUSED", "PENDING_REVIEW", "IN_PROCESS", "WITH_ISSUES", "DISAPPROVED", "PREAPPROVED", "PENDING_BILLING_INFO"]
 MAX_ADS = 300
@@ -41,7 +42,9 @@ AD_FIELDS = ("id,name,effective_status,created_time,campaign{id,name,objective},
 EXTRA_FIELDS = ("id,name,effective_status,created_time,campaign{id,name,objective,daily_budget,lifetime_budget,bid_strategy,smart_promotion_type},"
                 "adset{id,name,targeting,optimization_goal,bid_strategy,billing_event,destination_type,daily_budget,lifetime_budget},"
                 "creative{id,name,object_type,title,body,image_url,image_hash,thumbnail_url,video_id,call_to_action_type,link_url,"
-                "object_story_spec,asset_feed_spec,instagram_permalink_url,effective_object_story_id,degrees_of_freedom_spec,contextual_multi_ads}")
+                "object_story_spec,asset_feed_spec,instagram_permalink_url,effective_object_story_id,degrees_of_freedom_spec,contextual_multi_ads,"
+                "facebook_branded_content,instagram_branded_content}")
+UGC_NAME = re.compile(r"\bugc\b", re.I)   # an ad is a "UGC ad" when its own name says so
 # Meta's API names for the Advantage+ creative enhancements, in the words Ads Manager uses; a name not here is shown in plain words
 FEATURES = {"standard_enhancements": "Standard enhancements", "image_touchups": "Visual touch-ups", "image_templates": "Add overlays", "add_text_overlay": "Add text overlays",
             "image_brightness_and_contrast": "Adjust brightness and contrast", "enhance_cta": "Enhance CTA", "inline_comment": "Relevant comments",
@@ -156,7 +159,7 @@ def _uniq(xs):
 
 
 def creative_parts(cr):
-    """{format, primary[], headline[], description[], images[{hash|url}], videos[{id, thumb}], cards[], cta, link, page_id, ig_id} from one creative."""
+    """{format, primary[], headline[], description[], images[{hash|url}], videos[{id, thumb}], cards[], cta, link, page_id, ig_id, branded} from one creative."""
     cr = cr or {}
     story, feed = cr.get("object_story_spec") or {}, cr.get("asset_feed_spec") or {}
     link, video, photo, tmpl = story.get("link_data") or {}, story.get("video_data") or {}, story.get("photo_data") or {}, story.get("template_data") or {}
@@ -241,7 +244,8 @@ def creative_parts(cr):
     else:
         fmt = "image"
     return {"format": fmt, "slots": placement_media(feed, labelled), "primary": _uniq(primary), "headline": _uniq(headline), "description": _uniq(description), "images": images, "videos": videos, "cards": cards,
-            "cta": str(cta or "").upper(), "link": next((u for u in links if u), ""), "page_id": str(story.get("page_id") or ""), "ig_id": str(story.get("instagram_user_id") or story.get("instagram_actor_id") or "")}
+            "cta": str(cta or "").upper(), "link": next((u for u in links if u), ""), "page_id": str(story.get("page_id") or ""), "ig_id": str(story.get("instagram_user_id") or story.get("instagram_actor_id") or ""),
+            "branded": branded_content(cr)}
 
 
 def placement_media(feed, labelled):
@@ -276,6 +280,33 @@ def enhancements(cr):
     order = {"setup": 0, "creative": 1, "other": 2}
     return {"on": _uniq(sorted(on)), "off": _uniq(sorted(off)), "items": sorted(items.values(), key=lambda i: (order[i["group"]], not i["on"], i["label"])),
             "multiAdvertiser": "on" if multi == "OPT_IN" else "off" if multi == "OPT_OUT" else ""}
+
+
+def branded_content(cr):
+    """{on, fb, ig, fbId, igId}: whether a creative is set up as a Meta Partnership (branded content) ad, and which of the Facebook and
+    Instagram identities are linked. Meta's Graph API does not document the field names a partnership ad is read back under, so any
+    id-like value found under facebook_branded_content or instagram_branded_content counts as that identity being on."""
+    def pick(d):
+        d = d if isinstance(d, dict) else {}
+        return next((str(v) for v in d.values() if isinstance(v, (str, int)) and str(v)), "")
+    fb_id, ig_id = pick((cr or {}).get("facebook_branded_content")), pick((cr or {}).get("instagram_branded_content"))
+    return {"on": bool(fb_id or ig_id), "fb": bool(fb_id), "ig": bool(ig_id), "fbId": fb_id, "igId": ig_id}
+
+
+def ugc_check(name, page_id, brand_page_id, branded):
+    """The partnership-ad problems to flag for an ad whose own name says it is UGC (word "UGC", any case): Partnership ads should be on,
+    both the Facebook and Instagram identities linked, and the creator (not the brand) the primary identity. None for an ad whose name
+    does not say UGC."""
+    if not UGC_NAME.search(name or ""):
+        return None
+    problems = []
+    if not branded["on"]:
+        problems.append("Partnership ads is off")
+    elif not (branded["fb"] and branded["ig"]):
+        problems.append("Only the %s identity is linked" % ("Facebook" if branded["fb"] else "Instagram"))
+    if branded["on"] and brand_page_id and page_id and page_id == brand_page_id:
+        problems.append("The brand is the primary identity; the creator should be primary and the brand secondary")
+    return {"problems": problems}
 
 
 def optimization(ad):
@@ -319,7 +350,7 @@ def pull(client):
     try:
         ads = api.pages(act + "/ads", {"fields": EXTRA_FIELDS, "effective_status": json.dumps(STATUSES), "limit": 50})
     except RuntimeError as e:
-        log.append("The Advantage+ and optimization settings could not be read (%s), so they are not shown" % str(e)[:160])
+        log.append("The Advantage+, optimization and partnership-ad settings could not be read (%s), so they are not shown" % str(e)[:160])
         ads = api.pages(act + "/ads", {"fields": AD_FIELDS, "effective_status": json.dumps(STATUSES), "limit": 50})
     if not ads:  # say what the account does hold, so "no ads" is not mistaken for a broken read
         seen = _soft(log, "The ad statuses", lambda: api.pages(act + "/ads", {"fields": "effective_status", "limit": 200}, limit=2000), [])
@@ -328,6 +359,11 @@ def pull(client):
             by[a.get("effective_status") or "UNKNOWN"] = by.get(a.get("effective_status") or "UNKNOWN", 0) + 1
         log.append("No running or paused ads in this account; this token sees %d ads in all%s" % (len(seen), (" (" + ", ".join("%d %s" % (n, k.lower().replace("_", " ")) for k, n in sorted(by.items())) + ")") if by else ""))
     parsed = {a["id"]: creative_parts(a.get("creative")) for a in ads if a.get("id")}
+    # the brand's own identity: the page most of this account's ads run as (a UGC ad's primary identity should be the creator instead)
+    by_name = {a["id"]: a.get("name") or "" for a in ads if a.get("id")}
+    non_ugc_pages = [p["page_id"] for i, p in parsed.items() if p["page_id"] and not UGC_NAME.search(by_name.get(i, ""))]
+    brand_page_id = Counter(non_ugc_pages or [p["page_id"] for p in parsed.values() if p["page_id"]]).most_common(1)
+    brand_page_id = brand_page_id[0][0] if brand_page_id else ""
 
     hashes = sorted({i["hash"] for p in parsed.values() for i in p["images"] + [c["image"] for c in p["cards"] if c.get("image")] if i.get("hash")})
     images = {}
@@ -391,6 +427,7 @@ def pull(client):
             "page": {"name": pg.get("name") or client.get("name") or account.get("name") or "", "picture": pg.get("picture") or "", "ig": pg.get("ig") or "", "igPicture": pg.get("igPicture") or ""},
             "slots": p["slots"], "enhancements": enhancements(a.get("creative")), "optimization": optimization(a),
             "previews": prevs.get(a["id"]) or [], "igPermalink": (a.get("creative") or {}).get("instagram_permalink_url") or "",
+            "ugc": ugc_check(a.get("name"), p["page_id"], brand_page_id, p["branded"]),
         })
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
     print(f"Meta API: {act}, {len(out_ads)} ads ({sum(a['status'] == 'ACTIVE' for a in out_ads)} active), {api.requests} requests, {time.time() - t0:.0f}s")
