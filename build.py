@@ -709,6 +709,8 @@ def build_landing(ads):
     if not CLIENT.get("landing_pages"):
         return None, ""
     live = [a for a in ads if a.get("live")] or list(ads)  # live = enabled in Google Ads now; the sheet-only build has no flag
+    skip = [w.lower() for w in CLIENT.get("landing_skip_campaigns") or []]  # e.g. "test": test campaigns that show enabled but are finished
+    live = [a for a in live if not any(w in (a.get("campaign") or "").lower() for w in skip)]
     rows = {}
     for a in live:
         raw = (a.get("finalUrl") or "").strip()

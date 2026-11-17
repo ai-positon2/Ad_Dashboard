@@ -36,6 +36,13 @@ def test_paused_ads_and_ads_without_a_page_are_left_out():
     assert [x[3] for x in r] == ["https://x.test/a/"]
 
 
+def test_test_campaigns_are_left_out_when_the_client_says_so():
+    build.CLIENT = {"landing_pages": True, "landing_skip_campaigns": ["test"]}
+    data, _ = build.build_landing([ad("RSA", "A-Conv-Value-Test", "https://x.test/a/"), ad("DG", "P2-Test-Tier1", "https://x.test/b/"),
+                                   ad("RSA", "Brand", "https://x.test/c/")])
+    assert [r[4] for r in data["rows"]] == ["Brand"]
+
+
 def test_not_set_up_gives_nothing():
     build.CLIENT = {}
     assert build.build_landing([ad("RSA", "A", "https://x.test/a/")]) == (None, "")
