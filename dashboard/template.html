@@ -1248,19 +1248,19 @@ function renderHeader(){
   $("#fresh").innerHTML=`<span>Google combinations · <b>${esc(DATA.dateRange)}</b></span><span>Exported from Google Ads <b>${esc(when)}</b></span><span>Dashboard built <b>${esc(DATA.builtAt)}</b></span>${/^https?:$/.test(location.protocol)&&!/claude/.test(location.hostname)?`<a class="refresh" href="api/rebuild">Refresh from ${DATA.source==="api"?srcText:["sheet",...sources.slice(1)].join(" and ")}</a>`:""}`;
 }
 const LD=DATA.landing||null,hasLanding=!!(LD||DATA.landingError);
-const lstate={channel:"All",region:"All",q:""};
+const lstate={section:"All",region:"All",q:""};
 function lRender(){
   const el=$("#landing");
   if(!LD){el.innerHTML=`<div class="merr">${esc(DATA.landingError||"No landing pages for this dashboard.")}</div>`;return}
-  const C=LD.columns,ix=n=>C.indexOf(n),ch=ix("Channel"),rg=ix("Region"),url=ix("Landing Page URL"),nads=ix("# Ads");
+  const C=LD.columns,ix=n=>C.indexOf(n),ch=ix("Section"),rg=ix("Region"),url=ix("Landing Page URL"),nads=ix("# Ads");
   const opts=i=>i<0?[]:[...new Set(LD.rows.map(r=>r[i]).filter(Boolean))].sort();
   const q=lstate.q.toLowerCase();
-  const rows=LD.rows.filter(r=>(lstate.channel==="All"||r[ch]===lstate.channel)&&(lstate.region==="All"||r[rg]===lstate.region)&&(!q||r.join(" ").toLowerCase().includes(q)));
+  const rows=LD.rows.filter(r=>(lstate.section==="All"||r[ch]===lstate.section)&&(lstate.region==="All"||r[rg]===lstate.region)&&(!q||r.join(" ").toLowerCase().includes(q)));
   const sel=(id,label,i,cur)=>`<select class="field" id="${id}" aria-label="${label}"><option value="All">All ${label.toLowerCase()}s</option>${opts(i).map(o=>`<option value="${esc(o)}"${o===cur?" selected":""}>${esc(o)}</option>`).join("")}</select>`;
   const cell=(r,i)=>i===url?`<td class="wrapc"><a href="${esc(r[i])}" target="_blank" rel="noopener">${esc(r[i].replace(/^https?:\/\/(www\.)?/,""))} ↗</a></td>`:`<td class="${i===nads?"num":""}">${esc(r[i])}</td>`;
-  el.innerHTML=`<div class="lbar">${sel("l-ch","Channel",ch,lstate.channel)}${sel("l-rg","Region",rg,lstate.region)}<input class="field" id="l-q" type="search" placeholder="Search landing pages, campaigns" aria-label="Search" value="${esc(lstate.q)}"><span class="lsub">${rows.length} of ${LD.rows.length} rows · read from the landing pages sheet ${esc(LD.pulledAt)}</span></div>
+  el.innerHTML=`<div class="lbar">${sel("l-ch","Section",ch,lstate.section)}${sel("l-rg","Region",rg,lstate.region)}<input class="field" id="l-q" type="search" placeholder="Search landing pages, campaigns" aria-label="Search" value="${esc(lstate.q)}"><span class="lsub">${rows.length} of ${LD.rows.length} rows · from the live Google Ads ads · built ${esc(LD.pulledAt)}</span></div>
   <div class="lscroll"><table><thead><tr>${C.map(c=>`<th>${esc(c)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${C.map((c,i)=>cell(r,i)).join("")}</tr>`).join("")||`<tr><td colspan="${C.length}">No rows match.</td></tr>`}</tbody></table></div>`;
-  $("#l-ch").onchange=e=>{lstate.channel=e.target.value;lRender()};
+  $("#l-ch").onchange=e=>{lstate.section=e.target.value;lRender()};
   $("#l-rg").onchange=e=>{lstate.region=e.target.value;lRender()};
   const q2=$("#l-q");q2.oninput=e=>{lstate.q=e.target.value;const p=q2.selectionStart;lRender();const n=$("#l-q");n.focus();n.setSelectionRange(p,p)};
 }

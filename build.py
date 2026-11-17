@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import time
+import urllib.parse
 import urllib.request
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -682,21 +683,54 @@ def load_reddit(assets, forced, logo=""):
     return {"account": dict(m["account"], icon=logo), "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
 
 
-def load_landing():
-    """The "Landing Pages (Live)" tab of the client's landing-page workbook (public by link), for the Landing pages tab. (data, error). Not set up: (None, "")."""
-    ls = CLIENT.get("landing_sheet")
-    if not ls:
+LANDING_COLS = ["Region", "Section", "Landing Page", "Landing Page URL", "Campaigns Using It", "# Ads", "Ad Types"]
+
+
+def _landing_section(path):
+    """Which part of the website a landing page belongs to, read from its address."""
+    p = path.lower()
+    for words, name in ((("-vs-", "-versus-", "compar"), "Competitor Comparison"), (("industry",), "Industry"),
+                        (("/resource", "/blog", "/webinar", "/ebook", "/whitepaper"), "Resource / Content"), (("demo",), "Demo"),
+                        (("integration",), "Integrations"), (("estimator", "calculator"), "Estimator"), (("quiz",), "Quiz"),
+                        (("solution",), "Solution"), (("/platform", "/product"), "Platform")):
+        if any(w in p for w in words):
+            return name
+    return "Other"
+
+
+def _landing_region(campaign):
+    m = re.search(r"(?:^|[^A-Za-z])(APAC|EMEA|NAM|LATAM|ANZ)(?:[^A-Za-z]|$)", campaign or "")
+    return m.group(1) if m else "NAM"
+
+
+def build_landing(ads):
+    """The Landing pages tab, made from the live Google Ads ads: one row per landing page and campaign, with the ads using it.
+    (data, error). No ads with a landing page: (None, "")."""
+    if not CLIENT.get("landing_pages"):
         return None, ""
-    try:
-        data, _ = fetch(f"https://docs.google.com/spreadsheets/d/{ls['id']}/export?format=csv&gid={ls['gid']}")
-        df = pd.read_csv(io.BytesIO(data), dtype=str).dropna(how="all")
-    except Exception as e:  # noqa: BLE001
-        print(f"! Landing pages failed ({e})")
-        return None, f"The landing pages could not be read: {e}"
-    df = df.loc[:, [c for c in df.columns if not str(c).startswith("Unnamed")]]
-    rows = [[clean(v) for v in r] for r in df.itertuples(index=False)]
-    print(f"Landing pages: {len(rows)} rows")
-    return {"columns": [str(c) for c in df.columns], "rows": rows, "pulledAt": datetime.now().strftime("%Y-%m-%d %H:%M")}, ""
+    live = [a for a in ads if a.get("live")] or list(ads)  # live = enabled in Google Ads now; the sheet-only build has no flag
+    rows = {}
+    for a in live:
+        raw = (a.get("finalUrl") or "").strip()
+        if not raw:
+            continue
+        u = urllib.parse.urlsplit(raw)
+        url = urllib.parse.urlunsplit((u.scheme or "https", u.netloc.lower(), u.path.rstrip("/") + "/", "", ""))
+        kinds = {"RSA": ["RSA"], "PMAX": ["PMax"]}.get(a["kind"]) or (
+            [t for t, on in (("DG Image", a.get("images")), ("DG Video", a.get("videoThumbs"))) if on] or ["DG Image"])
+        r = rows.setdefault((url, a.get("campaign", "")), {"ads": 0, "types": []})
+        r["ads"] += 1
+        r["types"] += [t for t in kinds if t not in r["types"]]
+    out = []
+    for (url, camp), r in rows.items():
+        path = urllib.parse.urlsplit(url).path
+        slug = path.strip("/").split("/")[-1] if path.strip("/") else urllib.parse.urlsplit(url).netloc
+        out.append([_landing_region(camp), _landing_section(path), slug.replace("-", " ").title(), url, camp, str(r["ads"]), ", ".join(r["types"])])
+    if not out:
+        return None, "No live Google Ads ads with a landing page were found."
+    out.sort(key=lambda r: (r[0], r[1], r[2], r[4]))
+    print(f"Landing pages: {len(out)} rows from {len(live)} ads")
+    return {"columns": LANDING_COLS, "rows": out, "pulledAt": datetime.now().strftime("%Y-%m-%d %H:%M")}, ""
 
 
 def copy_fields(payload):
@@ -795,7 +829,7 @@ def main():
     payload["meta"], payload["metaError"] = load_meta(assets, forced, logo=logo)
     payload["gpt"], payload["gptError"] = load_gpt(assets, forced, logo=logo)
     payload["reddit"], payload["redditError"] = load_reddit(assets, forced, logo=logo)
-    payload["landing"], payload["landingError"] = load_landing()
+    payload["landing"], payload["landingError"] = build_landing(ads)
     attach_copy(payload, forced)
     DIST.mkdir(parents=True, exist_ok=True)
     if CLIENT.get("download"):  # the ads as an Excel file, from the same data as the page

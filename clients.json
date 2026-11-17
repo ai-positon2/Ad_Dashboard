@@ -12,7 +12,7 @@
     "business_name": "Tealium",
     "live_url": "https://adsdashboard.up.railway.app/tealium/",
     "hide_ad_strength": true,
-    "landing_sheet": {"id": "1CgIKJJ1Wn3XzzvxZ9rrOmSfQ5Uiv0Rm4TGtH9CHNYnc", "gid": "129169879"},
+    "landing_pages": true,
     "source": "api",
     "login_customer_id": "9923720096",
     "mcc_id": "7835049660",
