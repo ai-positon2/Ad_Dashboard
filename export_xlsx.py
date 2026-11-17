@@ -102,17 +102,23 @@ def workbook(payload):
     """The workbook for one dashboard payload."""
     wb = Workbook()
     wb.remove(wb.active)
-    gcols, grows = GOOGLE_COLS, _google_rows
-    if payload.get("hideStrength"):  # no ad strength on this dashboard, so none in its Excel either
-        i = [c[0] for c in GOOGLE_COLS].index("Ad strength")
-        gcols = [c for k, c in enumerate(GOOGLE_COLS) if k != i]
-        grows = lambda ads: ([v for k, v in enumerate(r) if k != i] for r in _google_rows(ads))  # noqa: E731
+    drop = set()  # columns this dashboard shows no part of, so none in its Excel either
+    if payload.get("hideStrength"):
+        drop.add("Ad strength")
+    if payload.get("hideCopyCheck"):
+        drop.add("Copy issues")
+
+    def keep(cols, rows):
+        idx = [k for k, c in enumerate(cols) if c[0] not in drop]
+        return [cols[k] for k in idx], (lambda ads: ([r[k] for k in idx] for r in rows(ads)))
+
+    gcols, grows = keep(GOOGLE_COLS, _google_rows)
     plats = [("Google", "g", payload.get("ads") or [], gcols, grows)]
     for key, title, cols, rows in (("meta", "Meta", META_COLS, _meta_rows), ("reddit", "Reddit", OTHER_COLS, _other_rows),
                                    ("gpt", "ChatGPT", OTHER_COLS, _other_rows)):
         ads = (payload.get(key) or {}).get("ads") or []
         if ads:
-            plats.append((title, key, ads, cols, rows))
+            plats.append((title, key, ads) + keep(cols, rows))
     issues = []
     for title, _, ads, cols, rows in plats:
         _sheet(wb, title, cols, rows(ads))
@@ -120,7 +126,8 @@ def workbook(payload):
             for i in (a.get("copy") or {}).get("issues") or []:
                 issues.append([title, str(a.get("id")), a.get("name") or a.get("campaign") or "", a.get("status") or ("Served" if a.get("served") else ""),
                                i["field"], _issue_text(i), i.get("msg") or "", i["text"]])
-    _sheet(wb, "Copy check", [("Platform", 10), ("Ad ID", 20), ("Ad", 30), ("Status", 12), ("Field", 16), ("Issue", 34), ("Why", 50), ("Text", 70)], issues)
+    if not payload.get("hideCopyCheck"):
+        _sheet(wb, "Copy check", [("Platform", 10), ("Ad ID", 20), ("Ad", 30), ("Status", 12), ("Field", 16), ("Issue", 34), ("Why", 50), ("Text", 70)], issues)
     return wb
 
 

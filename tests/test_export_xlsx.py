@@ -52,6 +52,16 @@ def test_no_ad_strength_column_when_the_dashboard_hides_it():
     assert dict(zip(heads, [c.value for c in ws[2]]))["Headlines"] == "Acme Cream\nGet 20% Off"
 
 
+
+def test_a_dashboard_with_the_copy_check_hidden_has_no_copy_check_in_its_excel():
+    from openpyxl import load_workbook
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "x.xlsx"
+        export_xlsx.write(dict(PAYLOAD, hideCopyCheck=True), path)
+        wb = load_workbook(path)
+        assert "Copy check" not in wb.sheetnames
+        assert all("Copy issues" not in [c.value for c in ws[1]] for ws in wb)
+
 if __name__ == "__main__":
     test_a_sheet_per_platform_and_a_row_per_issue()
     test_no_ad_strength_column_when_the_dashboard_hides_it()

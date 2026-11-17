@@ -985,7 +985,7 @@ function copyBadges(a){
   const c=a.copy;if(!c)return "";
   const n=c.issues.length,code=(c.promos.codes[0]||{}).code||(promoAssets(a).find(p=>p.code)||{}).code;
   const promo=code||c.promos.offers.length||promoAssets(a).length;
-  return (n?`<span class="kind qc" title="Copy check">${n} to fix</span>`:"")+(promo?`<span class="kind promo" title="Promotion in this ad">${esc(code||"Offer")}</span>`:"")+ugcBadge(a);
+  return (n&&!DATA.hideCopyCheck?`<span class="kind qc" title="Copy check">${n} to fix</span>`:"")+(promo?`<span class="kind promo" title="Promotion in this ad">${esc(code||"Offer")}</span>`:"")+ugcBadge(a);
 }
 function ugcBadge(a){
   const u=a.ugc;if(!u||!u.problems.length)return "";
@@ -1010,7 +1010,7 @@ function copyPanel(ad,running){
   const sum=[codes?n(codes,"promo code"):"No promo code",assets.length?n(assets.length,"Google promotion asset"):"",pr.offers.length?n(pr.offers.length,"offer")+" in the copy":""].filter(Boolean).join(", ");
   const promo=`<section class="aset wide"><h3>Promotions</h3><p class="csub">${rows.length?`${esc(sum)}. ${esc(live)}.`:"No promo code or offer in this ad."}</p>
     ${rows.length?`<ul class="slist">${rows.join("")}</ul>`:""}</section>`;
-  return `<div class="agrid media">${check}${promo}</div>`;
+  return `<div class="agrid media">${DATA.hideCopyCheck?"":check}${promo}</div>`;
 }
 
 /* ---------- detail ---------- */

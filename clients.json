@@ -12,6 +12,7 @@
     "business_name": "Tealium",
     "live_url": "https://adsdashboard.up.railway.app/tealium/",
     "hide_ad_strength": true,
+    "hide_copy_check": true,
     "landing_pages": true,
     "source": "api",
     "login_customer_id": "9923720096",

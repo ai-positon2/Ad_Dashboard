@@ -813,6 +813,7 @@ def main():
         "client": CLIENT["name"], "domain": CLIENT["domain"], "source": "api" if api_data else "sheet",
         "liveUrl": CLIENT.get("live_url", ""),
         "hideStrength": bool(CLIENT.get("hide_ad_strength")),
+        "hideCopyCheck": bool(CLIENT.get("hide_copy_check")),
         "dateRange": first(rc, "Date range").replace("_", " ").title(),
         "exportedAt": first(rc, "Exported at") or first(pc, "Exported at"),
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
