@@ -172,6 +172,8 @@ def account_facts(data, account):
         "ad_strength_counts": {s: sum(1 for a in ads if a.get("strength") == s)
                                for s in ("Poor", "Average", "Good", "Excellent")},
     }
+    if data.get("hideStrength"):
+        del facts["ad_strength_counts"]
     heads = {}
     for a in served:
         for c in a["combos"]:

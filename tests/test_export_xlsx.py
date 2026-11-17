@@ -43,6 +43,16 @@ def test_a_sheet_per_platform_and_a_row_per_issue():
     assert issue[:6] == ["Meta", "m1", "Static 1", "PAUSED", "Headline", 'Spelling: "Subsribe" → Subscribe']
 
 
+def test_no_ad_strength_column_when_the_dashboard_hides_it():
+    path = Path(tempfile.mkdtemp()) / "ads.xlsx"
+    export_xlsx.write(dict(PAYLOAD, hideStrength=True), path)
+    ws = load_workbook(path)["Google"]
+    heads = [c.value for c in ws[1]]
+    assert "Ad strength" not in heads and len(ws[2]) == len(heads)
+    assert dict(zip(heads, [c.value for c in ws[2]]))["Headlines"] == "Acme Cream\nGet 20% Off"
+
+
 if __name__ == "__main__":
     test_a_sheet_per_platform_and_a_row_per_issue()
+    test_no_ad_strength_column_when_the_dashboard_hides_it()
     print("ok")

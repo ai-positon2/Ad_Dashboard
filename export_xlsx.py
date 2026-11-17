@@ -102,7 +102,12 @@ def workbook(payload):
     """The workbook for one dashboard payload."""
     wb = Workbook()
     wb.remove(wb.active)
-    plats = [("Google", "g", payload.get("ads") or [], GOOGLE_COLS, _google_rows)]
+    gcols, grows = GOOGLE_COLS, _google_rows
+    if payload.get("hideStrength"):  # no ad strength on this dashboard, so none in its Excel either
+        i = [c[0] for c in GOOGLE_COLS].index("Ad strength")
+        gcols = [c for k, c in enumerate(GOOGLE_COLS) if k != i]
+        grows = lambda ads: ([v for k, v in enumerate(r) if k != i] for r in _google_rows(ads))  # noqa: E731
+    plats = [("Google", "g", payload.get("ads") or [], gcols, grows)]
     for key, title, cols, rows in (("meta", "Meta", META_COLS, _meta_rows), ("reddit", "Reddit", OTHER_COLS, _other_rows),
                                    ("gpt", "ChatGPT", OTHER_COLS, _other_rows)):
         ads = (payload.get(key) or {}).get("ads") or []

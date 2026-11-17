@@ -682,6 +682,23 @@ def load_reddit(assets, forced, logo=""):
     return {"account": dict(m["account"], icon=logo), "pulledAt": m["pulledAt"], "ads": ads, "log": m.get("log") or []}, ""
 
 
+def load_landing():
+    """The "Landing Pages (Live)" tab of the client's landing-page workbook (public by link), for the Landing pages tab. (data, error). Not set up: (None, "")."""
+    ls = CLIENT.get("landing_sheet")
+    if not ls:
+        return None, ""
+    try:
+        data, _ = fetch(f"https://docs.google.com/spreadsheets/d/{ls['id']}/export?format=csv&gid={ls['gid']}")
+        df = pd.read_csv(io.BytesIO(data), dtype=str).dropna(how="all")
+    except Exception as e:  # noqa: BLE001
+        print(f"! Landing pages failed ({e})")
+        return None, f"The landing pages could not be read: {e}"
+    df = df.loc[:, [c for c in df.columns if not str(c).startswith("Unnamed")]]
+    rows = [[clean(v) for v in r] for r in df.itertuples(index=False)]
+    print(f"Landing pages: {len(rows)} rows")
+    return {"columns": [str(c) for c in df.columns], "rows": rows, "pulledAt": datetime.now().strftime("%Y-%m-%d %H:%M")}, ""
+
+
 def copy_fields(payload):
     """{key: [(field, text)]}: every ad's words, per platform, for the copy check. Keys match what attach_copy writes back to."""
     out = {}
@@ -745,6 +762,9 @@ def main():
     fill_strengths(ads, rsa_sheet, pmax_sheet)
     if api_data:
         apply_api_strengths(ads, api_data["strengths"])
+    if CLIENT.get("hide_ad_strength"):  # this client's dashboard shows no ad strength
+        for a in ads:
+            a["strength"] = ""
     for a in ads:  # client asked to show Google's "Pending" ad strength as Average
         if a.get("strength", "").lower() == "pending":
             a["strength"] = "Average"
@@ -758,6 +778,7 @@ def main():
     payload = {
         "client": CLIENT["name"], "domain": CLIENT["domain"], "source": "api" if api_data else "sheet",
         "liveUrl": CLIENT.get("live_url", ""),
+        "hideStrength": bool(CLIENT.get("hide_ad_strength")),
         "dateRange": first(rc, "Date range").replace("_", " ").title(),
         "exportedAt": first(rc, "Exported at") or first(pc, "Exported at"),
         "builtAt": datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -774,6 +795,7 @@ def main():
     payload["meta"], payload["metaError"] = load_meta(assets, forced, logo=logo)
     payload["gpt"], payload["gptError"] = load_gpt(assets, forced, logo=logo)
     payload["reddit"], payload["redditError"] = load_reddit(assets, forced, logo=logo)
+    payload["landing"], payload["landingError"] = load_landing()
     attach_copy(payload, forced)
     DIST.mkdir(parents=True, exist_ok=True)
     if CLIENT.get("download"):  # the ads as an Excel file, from the same data as the page
