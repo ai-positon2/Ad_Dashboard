@@ -636,6 +636,39 @@ def previews(api, acct, groups, now, log):
     return out
 
 
+def dg_previews(api, acct, now, log):
+    """Tries Google's shareable preview for each Demand Gen ad (ad group + ad id). The request shape is a best guess, since Google
+    documents previews for asset groups only. The first refusal is logged in full and stops the attempt, so Railway's log shows what Google
+    says; the sheet's links then stay as they are. Never fatal."""
+    out = []
+    try:
+        ads = [(r["adGroupAd"]["ad"]["id"], r["adGroup"]["id"], r["campaign"]["name"], r["adGroup"]["name"]) for r in api.search(
+            acct["id"], "SELECT campaign.name, ad_group.id, ad_group.name, ad_group_ad.ad.id FROM ad_group_ad WHERE ad_group_ad.ad.type IN "
+                        "('DEMAND_GEN_MULTI_ASSET_AD', 'DEMAND_GEN_VIDEO_RESPONSIVE_AD', 'DEMAND_GEN_CAROUSEL_AD', 'DEMAND_GEN_PRODUCT_AD') "
+                        "AND ad_group_ad.status = 'ENABLED' AND ad_group.status = 'ENABLED' AND campaign.status = 'ENABLED'")]
+    except ApiError as e:
+        log(f"Demand Gen preview ads query failed (continuing): {e}")
+        return out
+    for i in range(0, len(ads), 10):
+        batch = ads[i:i + 10]
+        try:
+            r = api._post(acct["id"], {"shareablePreviews": [{"adGroupAdIdentifier": {"adGroupId": g, "adId": a}} for a, g, _, _ in batch]},
+                          ":generateShareablePreviews", PREVIEW_API)
+        except ApiError as e:
+            log(f"Demand Gen preview links refused by Google, so the sheet's links stay (first refusal): {str(e)[:600]}")
+            return out
+        for (a, _, camp, grp), x in zip(batch, r.get("responses", [])):
+            res = x.get("shareablePreviewResult")
+            if res and res.get("shareablePreviewUrl"):
+                out.append({"id": a, "campaign": camp, "group": grp, "url": res["shareablePreviewUrl"],
+                            "expires": str(res.get("expirationDateTime", ""))[:10], "created": now[:10]})
+            else:
+                log(f'no Demand Gen preview link for ad {a}: {g(x, "partialFailureError", "message") or "none returned"}')
+    if out:
+        log(f"Demand Gen preview links made by Google for {len(out)} ads")
+    return out
+
+
 # ---------------------------------------------------------------- entry point
 def _pull_account(api, acct, now):
     msgs = []
@@ -646,7 +679,7 @@ def _pull_account(api, acct, now):
     st = strengths(api, acct, log)
     groups = {r[6]: (r[3], r[5]) for r in live if r[2] == "ASSET_GROUP"}  # owner id -> (campaign, asset group)
     return {"rsa": rsa, "pmax": pmax, "live": live, "perf": perf, "strengths": st,
-            "previews": previews(api, acct, groups, now, log), "log": msgs}
+            "previews": previews(api, acct, groups, now, log) + dg_previews(api, acct, now, log), "log": msgs}
 
 
 def pull(client):
