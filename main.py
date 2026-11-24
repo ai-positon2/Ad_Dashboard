@@ -21,7 +21,8 @@ Env vars
     NOTIFY_SECRET   secret word shared with google-apps-script/comment_notifier.gs, which polls
                     <dashboard>/api/comments/new and emails the team about new comments
     SLACK_BOT_TOKEN  optional; the Slack bot's token (xoxb-...). With it, every new comment is posted to the channel SLACK_COMMENT_CHANNEL
-                    (default C0B322RN6SG, #adcopyqc). The bot must be in that channel.
+                    (default C0B322RN6SG, #adcopyqc); a client can have its own channel with "comment_channel" in clients.json
+                    (Tealium: C0B3QMATRPF). The bot must be in the channel.
     SLACK_COMMENT_WEBHOOK  optional, instead of the token; a Slack incoming-webhook URL. Every new comment is posted there straight away (as well as the email),
                     with the ad's account, campaign and ad group and a link to the ad
     MULTI           "on" = the one-service mode above
@@ -428,7 +429,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             places = {}
         host = self.headers.get("X-Forwarded-Host") or self.headers.get("Host") or ""
         base = ("https://" + host + (site.prefix or "")) if host else (site.cfg.get("live_url") or "").rstrip("/")
-        post_comment_to_slack(site.cfg["name"], base, ad_id, name, text, places.get(ad_id) or {})
+        post_comment_to_slack(site.cfg["name"], base, ad_id, name, text, places.get(ad_id) or {}, channel=site.cfg.get("comment_channel"))
 
     def _delete_comments(self):
         try:
