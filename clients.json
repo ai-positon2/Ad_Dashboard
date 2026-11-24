@@ -11,6 +11,7 @@
     "account_prefix": "Tealium - ENG - ",
     "business_name": "Tealium",
     "live_url": "https://adsdashboard.up.railway.app/tealium/",
+    "comment_channel": "C0B3QMATRPF",
     "hide_ad_strength": true,
     "hide_copy_check": true,
     "landing_pages": true,
