@@ -20,7 +20,9 @@ Env vars
                     across deploys; see comments.py.
     NOTIFY_SECRET   secret word shared with google-apps-script/comment_notifier.gs, which polls
                     <dashboard>/api/comments/new and emails the team about new comments
-    SLACK_COMMENT_WEBHOOK  optional; a Slack incoming-webhook URL. Every new comment is posted there straight away (as well as the email),
+    SLACK_BOT_TOKEN  optional; the Slack bot's token (xoxb-...). With it, every new comment is posted to the channel SLACK_COMMENT_CHANNEL
+                    (default C0B322RN6SG, #adcopyqc). The bot must be in that channel.
+    SLACK_COMMENT_WEBHOOK  optional, instead of the token; a Slack incoming-webhook URL. Every new comment is posted there straight away (as well as the email),
                     with the ad's account, campaign and ad group and a link to the ad
     MULTI           "on" = the one-service mode above
     SERVE_CLIENTS   MULTI only: comma-separated client keys to host (default: every client in clients.json)
@@ -57,6 +59,8 @@ OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 COMMENTS = os.environ.get("COMMENTS", "").strip().lower() in ("1", "on", "true", "yes")
 NOTIFY_SECRET = os.environ.get("NOTIFY_SECRET", "").strip()  # lets the Apps Script notifier read new comments
 SLACK_COMMENT_WEBHOOK = os.environ.get("SLACK_COMMENT_WEBHOOK", "").strip()
+SLACK_BOT_TOKEN = os.environ.get("SLACK_BOT_TOKEN", "").strip()
+SLACK_COMMENT_CHANNEL = os.environ.get("SLACK_COMMENT_CHANNEL", "").strip() or "C0B322RN6SG"
 MULTI = os.environ.get("MULTI", "").strip().lower() in ("1", "on", "true", "yes")
 BUILD_TIMEOUT = int(os.environ.get("BUILD_TIMEOUT", "1800"))
 _volume = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
@@ -266,16 +270,25 @@ def slack_comment_text(client, base, ad, name, text, where):
                     "<%s|Open the ad>" % link])
 
 
-def post_comment_to_slack(client, base, ad, name, text, where, webhook=None):
-    """Post a new comment to the Slack webhook. Returns an error text or None; never raises (a Slack problem must not lose or delay a comment)."""
+def post_comment_to_slack(client, base, ad, name, text, where, webhook=None, token=None, channel=None):
+    """Post a new comment to Slack: through the bot token into the channel when there is a token, else to the webhook. Returns an error text or
+    None; never raises (a Slack problem must not lose or delay a comment)."""
     url = SLACK_COMMENT_WEBHOOK if webhook is None else webhook
-    if not url:
+    token = SLACK_BOT_TOKEN if token is None else token
+    if not (url or token):
         return None
     try:
-        body = json.dumps({"text": slack_comment_text(client, base, ad, name, text, where or {})}).encode("utf-8")
-        req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+        msg = {"text": slack_comment_text(client, base, ad, name, text, where or {})}
+        headers = {"Content-Type": "application/json; charset=utf-8"}
+        if token:
+            url = "https://slack.com/api/chat.postMessage"
+            msg.update(channel=channel or SLACK_COMMENT_CHANNEL, unfurl_links=False)
+            headers["Authorization"] = "Bearer " + token
+        req = urllib.request.Request(url, data=json.dumps(msg).encode("utf-8"), headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=10) as r:
-            r.read()
+            reply = r.read()
+        if token and not json.loads(reply or b"{}").get("ok"):
+            raise RuntimeError("Slack said " + str(json.loads(reply).get("error")))
         return None
     except Exception as e:  # noqa: BLE001
         print(f"[slack-comment] failed: {e}", flush=True)
@@ -403,7 +416,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         error = comments.add(site.key, ad_id, body.get("name"), body.get("text"))
         if error:
             return self._json(400, {"error": error})
-        if SLACK_COMMENT_WEBHOOK:
+        if SLACK_COMMENT_WEBHOOK or SLACK_BOT_TOKEN:
             threading.Thread(target=self._slack_new_comment, args=(site, ad_id, str(body.get("name") or "").strip(), str(body.get("text") or "").strip()),
                              daemon=True).start()
         self._json(201, {"comments": comments.list_for(site.key, ad_id)})
@@ -529,5 +542,5 @@ if __name__ == "__main__":
     print(f"Serving on :{PORT}, {where}, rebuilding every {REBUILD_HOURS}h, "
           f"AI summary {'on' if OPENAI_KEY else 'off'}, comments "
           f"{('on, stored in ' + str(comments.DATA_DIR) + ('' if comments.PERSISTENT else ' (NOT persistent: attach a volume)')) if COMMENTS else 'off'}"
-          f", comment emails {'on' if COMMENTS and NOTIFY_SECRET else 'off'}, comment Slack alerts {'on' if COMMENTS and SLACK_COMMENT_WEBHOOK else 'off'}", flush=True)
+          f", comment emails {'on' if COMMENTS and NOTIFY_SECRET else 'off'}, comment Slack alerts {'on' if COMMENTS and (SLACK_COMMENT_WEBHOOK or SLACK_BOT_TOKEN) else 'off'}", flush=True)
     server.serve_forever()
