@@ -20,6 +20,8 @@ Env vars
                     across deploys; see comments.py.
     NOTIFY_SECRET   secret word shared with google-apps-script/comment_notifier.gs, which polls
                     <dashboard>/api/comments/new and emails the team about new comments
+    SLACK_COMMENT_WEBHOOK  optional; a Slack incoming-webhook URL. Every new comment is posted there straight away (as well as the email),
+                    with the ad's account, campaign and ad group and a link to the ad
     MULTI           "on" = the one-service mode above
     SERVE_CLIENTS   MULTI only: comma-separated client keys to host (default: every client in clients.json)
     DEFAULT_CLIENT  MULTI only: what "/" opens (default tealium)
@@ -54,6 +56,7 @@ OPENAI_KEY = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 COMMENTS = os.environ.get("COMMENTS", "").strip().lower() in ("1", "on", "true", "yes")
 NOTIFY_SECRET = os.environ.get("NOTIFY_SECRET", "").strip()  # lets the Apps Script notifier read new comments
+SLACK_COMMENT_WEBHOOK = os.environ.get("SLACK_COMMENT_WEBHOOK", "").strip()
 MULTI = os.environ.get("MULTI", "").strip().lower() in ("1", "on", "true", "yes")
 BUILD_TIMEOUT = int(os.environ.get("BUILD_TIMEOUT", "1800"))
 _volume = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
@@ -251,6 +254,34 @@ def comment_places(data):
     return out
 
 
+def slack_comment_text(client, base, ad, name, text, where):
+    """The Slack message for one new comment (Slack's &, < and > escaped so a comment cannot make a link or a mention)."""
+    esc = lambda t: str(t or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")  # noqa: E731
+    place = " › ".join(esc(where.get(k)) for k in ("account", "campaign", "adGroup") if where.get(k))
+    link = "%s/#ad-%s" % (base.rstrip("/"), urllib.parse.quote(str(ad), safe=":"))
+    NL = chr(10)
+    return NL.join(["*%s* commented on the %s ad previews dashboard" % (esc(name), esc(client)),
+                    (place or esc(ad)) + ("  ·  " + esc(where.get("kind")) if where.get("kind") else ""),
+                    ">" + esc(text).replace(NL, NL + ">"),
+                    "<%s|Open the ad>" % link])
+
+
+def post_comment_to_slack(client, base, ad, name, text, where, webhook=None):
+    """Post a new comment to the Slack webhook. Returns an error text or None; never raises (a Slack problem must not lose or delay a comment)."""
+    url = SLACK_COMMENT_WEBHOOK if webhook is None else webhook
+    if not url:
+        return None
+    try:
+        body = json.dumps({"text": slack_comment_text(client, base, ad, name, text, where or {})}).encode("utf-8")
+        req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+        with urllib.request.urlopen(req, timeout=10) as r:
+            r.read()
+        return None
+    except Exception as e:  # noqa: BLE001
+        print(f"[slack-comment] failed: {e}", flush=True)
+        return str(e)
+
+
 class Handler(http.server.SimpleHTTPRequestHandler):
     extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
                       ".html": "text/html; charset=utf-8", ".json": "application/json; charset=utf-8",
@@ -372,7 +403,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         error = comments.add(site.key, ad_id, body.get("name"), body.get("text"))
         if error:
             return self._json(400, {"error": error})
+        if SLACK_COMMENT_WEBHOOK:
+            threading.Thread(target=self._slack_new_comment, args=(site, ad_id, str(body.get("name") or "").strip(), str(body.get("text") or "").strip()),
+                             daemon=True).start()
         self._json(201, {"comments": comments.list_for(site.key, ad_id)})
+
+    def _slack_new_comment(self, site, ad_id, name, text):
+        try:
+            places = comment_places(json.loads((site.dist / "data.json").read_text(encoding="utf-8")))
+        except (OSError, ValueError, KeyError, TypeError):
+            places = {}
+        host = self.headers.get("X-Forwarded-Host") or self.headers.get("Host") or ""
+        base = ("https://" + host + (site.prefix or "")) if host else (site.cfg.get("live_url") or "").rstrip("/")
+        post_comment_to_slack(site.cfg["name"], base, ad_id, name, text, places.get(ad_id) or {})
 
     def _delete_comments(self):
         try:
@@ -486,5 +529,5 @@ if __name__ == "__main__":
     print(f"Serving on :{PORT}, {where}, rebuilding every {REBUILD_HOURS}h, "
           f"AI summary {'on' if OPENAI_KEY else 'off'}, comments "
           f"{('on, stored in ' + str(comments.DATA_DIR) + ('' if comments.PERSISTENT else ' (NOT persistent: attach a volume)')) if COMMENTS else 'off'}"
-          f", comment emails {'on' if COMMENTS and NOTIFY_SECRET else 'off'}", flush=True)
+          f", comment emails {'on' if COMMENTS and NOTIFY_SECRET else 'off'}, comment Slack alerts {'on' if COMMENTS and SLACK_COMMENT_WEBHOOK else 'off'}", flush=True)
     server.serve_forever()
