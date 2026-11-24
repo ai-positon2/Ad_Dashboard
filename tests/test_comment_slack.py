@@ -42,10 +42,32 @@ def test_it_posts_json_to_the_webhook_and_never_raises():
     assert seen["url"].startswith("https://hooks.slack.com/") and "Marie" in seen["body"]["text"]
     with mock.patch.object(main.urllib.request, "urlopen", side_effect=OSError("down")):
         assert "down" in main.post_comment_to_slack("Tealium", "https://x/", "1", "Marie", "hi", WHERE, webhook="https://hooks.slack.com/services/T/B/x")
-    assert main.post_comment_to_slack("Tealium", "https://x/", "1", "Marie", "hi", WHERE, webhook="") is None        # off without a webhook
+    assert main.post_comment_to_slack("Tealium", "https://x/", "1", "Marie", "hi", WHERE, webhook="", token="") is None        # off without either
+
+
+def test_with_a_bot_token_it_posts_into_the_channel_and_reports_slacks_refusal():
+    seen = {}
+
+    def reply(body):
+        class R:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self): return body
+        return R()
+
+    def fake(req, timeout=0):
+        seen["url"], seen["auth"], seen["body"] = req.full_url, req.get_header("Authorization"), json.loads(req.data)
+        return reply(b'{"ok": true}')
+    with mock.patch.object(main.urllib.request, "urlopen", fake):
+        assert main.post_comment_to_slack("Tealium", "https://x/", "1", "Marie", "hi", WHERE, webhook="", token="xoxb-t") is None
+    assert seen["url"] == "https://slack.com/api/chat.postMessage" and seen["auth"] == "Bearer xoxb-t"
+    assert seen["body"]["channel"] == "C0B322RN6SG" and "Marie" in seen["body"]["text"]
+    with mock.patch.object(main.urllib.request, "urlopen", lambda req, timeout=0: reply(b'{"ok": false, "error": "not_in_channel"}')):
+        assert "not_in_channel" in main.post_comment_to_slack("Tealium", "https://x/", "1", "Marie", "hi", WHERE, webhook="", token="xoxb-t")
 
 
 if __name__ == "__main__":
     test_message_names_who_where_and_links_to_the_ad_without_letting_the_comment_make_a_mention()
     test_it_posts_json_to_the_webhook_and_never_raises()
+    test_with_a_bot_token_it_posts_into_the_channel_and_reports_slacks_refusal()
     print("ok")
